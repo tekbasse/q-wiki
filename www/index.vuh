@@ -1,0 +1,8 @@
+set conn_url [site_node::conn_url]
+set query [ns_conn query]
+#set conn_url0 \[ad_conn url\]
+ns_log Notice "q-wiki/index.vuh: query: '$query'"
+rp_form_put url $conn_url
+rp_form_put m "" 
+ad_returnredirect q-wiki
+ad_script_abort
