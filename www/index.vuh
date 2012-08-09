@@ -21,7 +21,7 @@ array set input_array [list \
                            mode "p" \
                            next_mode "p" \
                           ]
-
+set query_key_list [array names input_array]
 #set conn_url0 \[ad_conn url\]
 ns_log Notice "q-wiki/index.vuh: query: '$query' site_node::conn_url '$conn_url' ns_conn url '$conn_url2'"
 ns_log Notice "q-wiki/index.vuh: ad_conn package_url: '$conn_package_url' ad_conn package_id '$conn_package_id'"
@@ -29,7 +29,7 @@ ns_log Notice "q-wiki/index.vuh: ad_conn package_url: '$conn_package_url' ad_con
 set form_posted [qf_get_inputs_as_array input_array]
 rp_form_put url $conn_url
 #rp_form_put mode input_array(mode)
-foreach query_key [array names input_array] {
+foreach query_key $query_key_list {
     rp_form_put $query_key $input_array(${query_key})
 }
 rp_internal_redirect /packages/q-wiki/www/q-wiki
