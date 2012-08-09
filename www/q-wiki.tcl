@@ -591,9 +591,9 @@ switch -exact -- $mode {
     
 set menu_html ""
 foreach item_list $menu_list {
-    set label [lindex $item_list 0]
-    set url [lindex $item_list 1]
-    append menu_html "<a href=\"q-wiki/index?${url}\">${label}</a>&nbsp;"
+    set menu_label [lindex $item_list 0]
+    set menu_url [lindex $item_list 1]
+    append menu_html "<a href=\"${url}?${menu_url}\">${menu_label}</a>&nbsp;"
 }
 
 set user_message_html ""
