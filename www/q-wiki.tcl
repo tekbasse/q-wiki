@@ -1,7 +1,5 @@
 # set defaults
 set title "Q-Wiki"
-set doc(title) $title
-set context [list $title]
 
 set package_id [ad_conn package_id]
 set user_id [ad_conn user_id]
@@ -34,6 +32,10 @@ set page_contents $page_contents_default
 set form_posted [qf_get_inputs_as_array input_array]
 set page_id $input_array(page_id)
 set url $input_array(url)
+set page_name $input_array(page_name)
+set page_title $input_array(page_title)
+set page_comments $input_array(page_comments)
+set page_contents $input_array(page_contents)
 set mode $input_array(mode)
 set next_mode $input_array(next_mode)
 
@@ -87,6 +89,8 @@ if { $form_posted } {
             ns_log Notice "q-wiki.tcl validated for l"
         }
         n {
+            set conn_package_url [ad_conn package_url]
+            set page_name [string range $url [string length $conn_package_url] end]
             set validated 1
             ns_log Notice "q-wiki.tcl validated for n"
         }
@@ -274,6 +278,7 @@ switch -exact -- $mode {
     e {
         #  edit...... edit/form mode of current context
         ns_log Notice "q-wiki.tcl mode = edit"
+        append title " edit"
         #requires page_id
         
         # get table from ID
@@ -316,7 +321,7 @@ switch -exact -- $mode {
     l {
         #  list...... presents a list of pages
         ns_log Notice "q-wiki.tcl mode = $mode ie. list of pages, index"
-        
+        append title " index" 
         # show page
         # sort by template_id, columns
         
@@ -388,10 +393,11 @@ switch -exact -- $mode {
     n {
         #  new....... creates new, blank context (form)    
         ns_log Notice "q-wiki.tcl mode = new"
+        append title " new"
         #requires no page_id
         # make a form with no existing page_id
         
-        qf_form action q-wiki/index method get id 20120722
+        qf_form action q-wiki/index method get id 20120809
         
         qf_input type hidden value w name mode label ""
         if { $page_id > 0 } {
@@ -399,17 +405,17 @@ switch -exact -- $mode {
         }
         qf_append html "<h3>Q-Wiki new page</h3>"
         qf_append html "<div style=\"width: 70%; text-align: right;\">"
-        qf_input type text value "" name page_name label "Name:" size 40 maxlength 40
+        qf_input type text value $page_name name page_name label "Name:" size 40 maxlength 40
         qf_append html "<br>"
-        qf_input type text value "" name page_title label "Title:" size 40 maxlength 80
+        qf_input type text value $page_title name page_title label "Title:" size 40 maxlength 80
         qf_append html "<br>"
-        qf_textarea value "" cols 40 rows 3 name page_comments label "Comments:"
+        qf_textarea value $page_comments cols 60 rows 3 name page_comments label "Comments:"
         qf_append html "<br>"
-        qf_textarea value $page_contents cols 40 rows 6 name page_contents label "Contents:"
+        qf_textarea value $page_contents cols 60 rows 6 name page_contents label "Contents:"
         qf_append html "</div>"
         
         
-        qf_input type submit value "Save"
+        qf_input type submit value "Submit"
         qf_close
         set form_html [qf_read]
     }
@@ -600,3 +606,7 @@ set user_message_html ""
 foreach user_message $user_message_list {
     append user_message_html "<li>${user_message}</li>"
 }
+
+
+set doc(title) $title
+set context [list $title]
