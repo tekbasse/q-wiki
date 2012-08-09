@@ -265,9 +265,9 @@ if { $form_posted } {
 }
 
 
-set menu_list [list [list Q-Wiki ""]]
+set menu_list [list [list Q-Wiki index]]
 if { $write_p } {
-    lappend menu_list [list new mode=n]
+    lappend menu_list [list new ?mode=n]
 }
 
 switch -exact -- $mode {
@@ -490,7 +490,7 @@ switch -exact -- $mode {
         #  view page(s) (standard, html page document/report)
         ns_log Notice "q-wiki.tcl mode = $mode ie. view table"
         if { [qf_is_natural_number $page_id] && $write_p } {
-            lappend menu_list [list edit "page_id=${page_id}&mode=e"]
+            lappend menu_list [list edit "${url}?page_id=${page_id}&mode=e"]
             set menu_e_p 1
         } else {
             set menu_e_p 0
@@ -506,11 +506,11 @@ switch -exact -- $mode {
             
             if { !$menu_e_p && $write_p } {
                 
-                lappend menu_list [list edit "page_id=${page_id}&mode=e"]
+                lappend menu_list [list edit "${url}?page_id=${page_id}&mode=e"]
             }
         }
         if { [qf_is_natural_number $page_id]  } {
-            lappend menu_list [list compute "page_id=${page_id}&mode=c"]
+            lappend menu_list [list compute "${url}?page_id=${page_id}&mode=c"]
         }
     }
     w {
@@ -593,7 +593,7 @@ set menu_html ""
 foreach item_list $menu_list {
     set menu_label [lindex $item_list 0]
     set menu_url [lindex $item_list 1]
-    append menu_html "<a href=\"${url}?${menu_url}\">${menu_label}</a>&nbsp;"
+    append menu_html "<a href=\"${menu_url}\">${menu_label}</a>&nbsp;"
 }
 
 set user_message_html ""

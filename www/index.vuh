@@ -22,11 +22,35 @@ array set input_array [list \
                            next_mode "p" \
                           ]
 set query_key_list [array names input_array]
+
+set form_posted [qf_get_inputs_as_array input_array]
+
 #set conn_url0 \[ad_conn url\]
 ns_log Notice "q-wiki/index.vuh: query: '$query' site_node::conn_url '$conn_url' ns_conn url '$conn_url2'"
 ns_log Notice "q-wiki/index.vuh: ad_conn package_url: '$conn_package_url' ad_conn package_id '$conn_package_id'"
 
-set form_posted [qf_get_inputs_as_array input_array]
+
+set page_id [qw_page_id_from_url $conn_url]
+# does page exist? If so, do following, otherwise return 404 or new, depending on write_p status.
+if { [string length $page_id] == 0 } {
+    # page doesn't exist
+    set user_id [ad_conn user_id]
+    set package_id [ad_conn package_id]
+    set write_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege write]
+    if { $write_p } {
+        set input_array(mode) n
+        # pass it forward as request for new page 
+    } else {
+        doc_return 404 text/html "
+	[ad_header "Page Not Found"]
+	<p>Page not found.</p>
+	<p>Please contact <a href=\"mailto:[ad_system_owner]\">[ad_system_owner]</a> if you think this is an error.</p>
+    <p><a href=\"index\">Continue browsing</a>.</p>"
+        ns_log Notice "q-wiki/index.vuh: requested page: '$conn_url' not found."
+        ad_script_abort
+    }
+}
+# page exists. Pass it forward.
 rp_form_put url $conn_url
 #rp_form_put mode input_array(mode)
 foreach query_key $query_key_list {
@@ -34,3 +58,4 @@ foreach query_key $query_key_list {
 }
 rp_internal_redirect /packages/q-wiki/www/q-wiki
 ad_script_abort
+
