@@ -207,7 +207,7 @@ if { $validated } {
     if { $mode eq "d" } {
         #  delete.... removes context     
         ns_log Notice "file-utility.tcl mode = delete"
-        if { [ecds_is_natural_number $initial_conditions_tid] } {
+        if { [qf_is_natural_number $initial_conditions_tid] } {
             # delete file
             lappend user_message_list "filepath deleted."
         }

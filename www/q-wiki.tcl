@@ -59,7 +59,7 @@ if { $form_posted } {
     # t = trash (template_id or page_id)
     # v = view page_id (of template_id, defaults to current page_id of template_id)
     # w/v = write page_id of template_id, make page_id current for template_id, show page_id
-    if { ![ecds_is_natural_number $page_id] } {
+    if { ![qf_is_natural_number $page_id] } {
         set page_id ""
     }
     
@@ -203,7 +203,7 @@ if { $form_posted } {
         if { $mode eq "d" } {
             #  delete.... removes context     
             ns_log Notice "q-wiki.tcl mode = delete"
-            if { [ecds_is_natural_number $page_id] } {
+            if { [qf_is_natural_number $page_id] } {
                 qw_page_delete $page_id
             }
             set mode $next_mode
@@ -212,7 +212,7 @@ if { $form_posted } {
         if { $mode eq "t" } {
             #  trash
             ns_log Notice "q-wiki.tcl mode = trash"
-            if { [ecds_is_natural_number $page_id] && $write_p } {
+            if { [qf_is_natural_number $page_id] && $write_p } {
                 set trashed_p [lindex [qw_page_stats $page_id] 7]
                 if { $trashed_p == 1 } {
                     set trash 0
@@ -282,7 +282,7 @@ switch -exact -- $mode {
         qf_form action q-wiki/index method get id 20120721
         qf_input type hidden value w name mode label ""
         
-        if { [ecds_is_natural_number $page_id] } {
+        if { [qf_is_natural_number $page_id] } {
             set page_stats_list [qw_page_stats $page_id]
             set page_name [lindex $page_stats_list 0]
             set page_title [lindex $page_stats_list 1]
@@ -489,13 +489,13 @@ switch -exact -- $mode {
     v {
         #  view page(s) (standard, html page document/report)
         ns_log Notice "q-wiki.tcl mode = $mode ie. view table"
-        if { [ecds_is_natural_number $page_id] && $write_p } {
+        if { [qf_is_natural_number $page_id] && $write_p } {
             lappend menu_list [list edit "page_id=${page_id}&mode=e"]
             set menu_e_p 1
         } else {
             set menu_e_p 0
         }
-        if { [ecds_is_natural_number $page_id] } {
+        if { [qf_is_natural_number $page_id] } {
             set page_stats_list [qw_page_stats $page_id]
             set page_name [lindex $page_stats_list 0]
             set page_title [lindex $page_stats_list 1]
@@ -509,7 +509,7 @@ switch -exact -- $mode {
                 lappend menu_list [list edit "page_id=${page_id}&mode=e"]
             }
         }
-        if { [ecds_is_natural_number $page_id]  } {
+        if { [qf_is_natural_number $page_id]  } {
             lappend menu_list [list compute "page_id=${page_id}&mode=c"]
         }
     }
