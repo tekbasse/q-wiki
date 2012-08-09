@@ -9,6 +9,8 @@ set write_p [permission::permission_p -party_id $user_id -object_id $package_id 
 set admin_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege admin]
 
 array set input_array [list \
+                           url ""\
+                           page_id ""\
                            page_name ""\
                            page_title ""\
                            page_contents ""\
@@ -30,6 +32,8 @@ set user_message_list [list ]
 set page_contents_default $input_array(page_contents_default)
 set page_contents $page_contents_default
 set form_posted [qf_get_inputs_as_array input_array]
+set page_id $input_array(page_id)
+set url $input_array(url)
 set mode $input_array(mode)
 set next_mode $input_array(next_mode)
 
@@ -55,10 +59,13 @@ if { $form_posted } {
     # t = trash (template_id or page_id)
     # v = view page_id (of template_id, defaults to current page_id of template_id)
     # w/v = write page_id of template_id, make page_id current for template_id, show page_id
-
+    if { ![ecds_is_natural_number $page_id] } {
+        set page_id ""
+    }
+    
     switch -exact -- $mode {
         d {
-            if { [qw_page_id_exists $page_id $package_id } {
+            if { [qw_page_id_exists $page_id $package_id] } {
                 ns_log Notice "q-wiki.tcl validated for d"
                 set validated 1
             } else {
@@ -111,7 +118,7 @@ if { $form_posted } {
             # page_template_id gets checked against db for added security
             set page_template_id $input_array(page_template_id)
             set page_flags $input_array(page_flags)
-
+            
             set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
             if { $allow_adp_tcl_p } {
                 # screen page_contents
@@ -177,7 +184,7 @@ if { $form_posted } {
             ns_log Notice "q-wiki.tcl validated for $mode"
         }
         default {
-            if { [qw_page_id_exists $page_id $package_id } {
+            if { [qw_page_id_exists $page_id $package_id] } {
                 ns_log Notice "q-wiki.tcl validated for v"
                 set validated 1
                 set mode "v"
@@ -188,8 +195,8 @@ if { $form_posted } {
         }
         
     }
-    # end switch
-    
+    #^ end switch
+
     if { $validated } {
         # execute validated input
         
@@ -516,8 +523,7 @@ switch -exact -- $mode {
         set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
         # page_contents
 
-# move the filtering of content to when content is being posted, except for explicitly banned screening to allow for dynamic banning of existing content
-
+        #  screen existing content 
         if { $allow_adp_tcl_p } {
             # screen page_contents
             set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
@@ -527,7 +533,6 @@ switch -exact -- $mode {
             foreach code_block $code_block_list {
                 set code_segments_list [qf_tcl_code_parse_lines_list $code_block]
                 foreach code_segment $code_segments_list  {
-                    # see filters in accounts-finance/tcl/modeling-procs.tcl
                     set executable_fragment_list [split $code_segment "["]
                     set executable_list [list ]
                     foreach executable_fragment $executable_fragment_list {
@@ -548,12 +553,12 @@ switch -exact -- $mode {
                                 if { [regexp $banned_proc_exp " $executable " scratch] } {
                                     # banned executable found
                                     lappend flagged_list $executable
-                                    lappend user_message_list "'$executable' is not allowed."
+                                    ns_log Warning "q-wiki.tcl(549) blocked executable '$executable' found in page $page_id."
                                 }
                             }            
                         } else {
                             lappend flagged_list $executable
-                            lappend user_message_list "'$executable' is not allowed."
+                            ns_log Warning "q-wiki.tcl(555) blocked executable '$executable' found in page $page_id."
                         }
                     }
                 }
@@ -563,6 +568,8 @@ switch -exact -- $mode {
                 set page_contents_filtered $page_contents
             } else {
                 set page_contents_filtered ""
+                ns_log Notice "q-wiki.tcl(564) trashing page $page_id due to existing banned procs."
+                qw_page_trash $trash $page_id
             }
         } else {
             set page_contents_list [qf_remove_tag_contents '<%' '%>' $page_contents]
@@ -576,7 +583,7 @@ switch -exact -- $mode {
 
         # page_contents_filtered
         set page_main_code [template::adp_compile -string $page_contents_filtered]
-        set page_main_code_output [template::adp_eval page_main_code]
+        set page_main_code_html [template::adp_eval page_main_code]
         
     }
 }
