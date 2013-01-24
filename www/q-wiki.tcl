@@ -5,6 +5,7 @@ set package_id [ad_conn package_id]
 set user_id [ad_conn user_id]
 set write_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege write]
 set admin_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege admin]
+set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
 
 array set input_array [list \
                            url ""\
@@ -25,6 +26,8 @@ array set input_array [list \
                           ]
 
 set user_message_list [list ]
+# set form default values, if any.
+# <none>
 
 # get previous form inputs if they exist
 set page_contents_default $input_array(page_contents_default)
@@ -64,7 +67,8 @@ if { $form_posted } {
     if { ![qf_is_natural_number $page_id] } {
         set page_id ""
     }
-    
+
+    # validate input for specific mode    
     switch -exact -- $mode {
         d {
             if { [qw_page_id_exists $page_id $package_id] } {
@@ -189,7 +193,7 @@ if { $form_posted } {
         }
         default {
             if { [qw_page_id_exists $page_id $package_id] } {
-                ns_log Notice "q-wiki.tcl validated for v"
+                ns_log Notice "q-wiki.tcl validated for default"
                 set validated 1
                 set mode "v"
             } else {
@@ -203,7 +207,7 @@ if { $form_posted } {
 
     if { $validated } {
         # execute validated input
-        
+        # IF is used instead of SWITCH, so multiple sub-modes can be processed as a single mode.
         if { $mode eq "d" } {
             #  delete.... removes context     
             ns_log Notice "q-wiki.tcl mode = delete"

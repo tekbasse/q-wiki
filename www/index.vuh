@@ -1,3 +1,4 @@
+# Look at affiliate app on birdswelcome for app framework here.
 set conn_url [site_node::conn_url]
 set conn_url2 [ns_conn url]
 set query [ns_conn query]
@@ -50,6 +51,9 @@ if { [string length $page_id] == 0 } {
 set input_array(url) $conn_url
 
 #rp_form_put mode input_array(mode)
+
+# re post data to new location
+## When is this necessary? hopefully never, but good to know
 foreach query_key $query_key_list {
     rp_form_put $query_key $input_array(${query_key})
 }
