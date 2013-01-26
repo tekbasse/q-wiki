@@ -1,4 +1,8 @@
 # set defaults
+# template_id is first page_id, subsequent revisions have same template_id, but new page_id
+# flags are blank -- an unused db column / page attribute for extending the app for use cases
+
+
 set title "Q-Wiki"
 
 set package_id [ad_conn package_id]
@@ -6,7 +10,7 @@ set user_id [ad_conn user_id]
 set write_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege write]
 set admin_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege admin]
 set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
-# template_id is the 
+
 array set input_array [list \
                            url ""\
                            page_id ""\
@@ -184,11 +188,6 @@ if { $form_posted } {
                 set mode e
             }
 
-            # page_url page_id
-            set conn_package_url [ad_conn package_url]
-            set page_url [string range $url [string length $conn_package_url] end]
-            set page_id [qw_page_id_from_url $page_url $package_id]
-            set page_url [ad_urlencode $page_name]
             # page_name
             if { $page_name eq "" && $page_id eq "" } {
                 set page_name "[clock format [clock seconds] -format %Y%m%d-%X]"
@@ -204,6 +203,45 @@ if { $form_posted } {
                 set page_title "${page_id}"
             } else {
                 set page_title [string range $page_title 0 79]
+            }
+
+            # page_url page_id template_id
+            # information from connection includes page_id, page_template_id
+            set conn_package_url [ad_conn package_url]
+            set page_url [string range $url [string length $conn_package_url] end]
+
+            # info from db, via connection url
+            set page_id_from_url [qw_page_id_from_url $page_url $package_id]
+            if { $page_id_from_url ne "" } {
+                # page exists
+                # get info to pass back to write proc
+                set page_stats_list [qw_page_stats $page_id $package_id $user_id]
+                set page_template_id_from_db [lindex $page_stats_list 5]
+                # what kind of permissions are enforce here?
+                # if package parameter says each template_id is an object_id, 
+                # check user_id against object_id, otherwise check against package_id
+                # However, original_page_creation_user_id is in the db, so that instance specific
+                # user permissions can be supported.
+                # set original_user_id \[lindex $page_stats_list 11\]
+
+                # check for form/db descrepencies
+                if { $page_id ne $page_id_from_url } {
+                    set  mode v
+                    ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' ne page_id_from_url '$page_id_from_url' "
+                    set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
+                }
+                if { $page_template ne "" && $page_template_id ne $page_template_id_from_db } {
+                    set mode v
+                    ns_log Notice "q-wiki/q-wiki.tcl page_template_id '${page_template_id}' ne page_template_id_from_db '${page_template_id_from_db}' "
+                    set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
+
+                }
+
+            } else {
+                # new page, page_id eq ""
+                set page_url [ad_urlencode $page_name]
+                set template_id ""
+                set page_flags ""
             }
             set validated 1
             if { $mode eq "n" } {
@@ -302,7 +340,7 @@ switch -exact -- $mode {
         
         
         qf_form action q-wiki/index method get id 20120721
-        qf_input type hidden value w name mode label ""
+        qf_input type hidden value n name mode label ""
         
         if { [qf_is_natural_number $page_id] } {
             set page_stats_list [qw_page_stats $page_id]

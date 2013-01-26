@@ -72,7 +72,8 @@ ad_proc -public qw_page_create {
             if { $template_id eq "" } {
                 set template_id $page_id
             }
-            db_transaction {
+            set trashed_p 0
+#            db_transaction \{
                 db_dml wiki_page_create { insert into qw_wiki_page
                     (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id)
                     values (:page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id) }
@@ -80,12 +81,12 @@ ad_proc -public qw_page_create {
                 # add entry to qw_page_url_map
                 db_dml wiki_page_url_create { insert into qw_page_url_map
                     ( url, page_id, trashed, instance_id )
-                    ( :url, :page_id, '0', :instance_id ) }
+                    values ( :url, :page_id, :trashed_p, :instance_id ) }
 
-            } on_error {
+#            \} on_error \{
                 set page_id 0
                 ns_log Error "qw_page_create: general psql error during db_dml"
-            }
+#            \}
         } else {
             set page_id 0
             ns_log Warning "qw_page_create: page already exists for page_id $page_id"
