@@ -6,7 +6,7 @@ set user_id [ad_conn user_id]
 set write_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege write]
 set admin_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege admin]
 set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
-
+# template_id is the 
 array set input_array [list \
                            url ""\
                            page_id ""\
@@ -27,7 +27,7 @@ array set input_array [list \
 
 set user_message_list [list ]
 # set form default values, if any.
-# <none>
+# none. Simply expressed presets are added during set input_array
 
 # get previous form inputs if they exist
 set page_contents_default $input_array(page_contents_default)
@@ -67,7 +67,7 @@ if { $form_posted } {
     if { ![qf_is_natural_number $page_id] } {
         set page_id ""
     }
-
+    
     # validate input for specific mode    
     switch -exact -- $mode {
         d {
@@ -92,12 +92,6 @@ if { $form_posted } {
             set validated 1
             ns_log Notice "q-wiki.tcl validated for l"
         }
-        n {
-            set conn_package_url [ad_conn package_url]
-            set page_name [string range $url [string length $conn_package_url] end]
-            set validated 1
-            ns_log Notice "q-wiki.tcl validated for n"
-        }
         r {
             if { [qw_page_id_exists $page_id $package_id] } {
                 set validated 1
@@ -116,7 +110,7 @@ if { $form_posted } {
                 set next_mode ""
             } 
         }
-        w {
+        n {
             set page_name $input_array(page_name)
             set page_title $input_array(page_title)
             set page_contents $input_array(page_contents)
@@ -128,11 +122,13 @@ if { $form_posted } {
             set page_flags $input_array(page_flags)
             
             set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
+            set flagged_list [list ]
+
             if { $allow_adp_tcl_p } {
                 # screen page_contents
                 set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
                 set allowed_proc_list [split [parameter::get -package_id $package_id -parameter AllowedProc]]
-                set flagged_list [list ]
+
                 set code_block_list [qf_tag_contents_list '<%' '%>' $page_contents]
                 foreach code_block $code_block_list {
                     set code_segments_list [qf_tcl_code_parse_lines_list $code_block]
@@ -181,14 +177,38 @@ if { $form_posted } {
                     append page_contents_filtered $page_segment
                 }
             }
-            # set page_contents_filtered was $page_contents
+            # use page_contents_filtered, was $page_contents
+            set page_contents $page_contents_filtered
+
             if { [llength $flagged_list ] > 0 } {
                 set mode e
-                set next_mode ""
+            }
+
+            # page_url page_id
+            set conn_package_url [ad_conn package_url]
+            set page_url [string range $url [string length $conn_package_url] end]
+            set page_id [qw_page_id_from_url $page_url $package_id]
+            set page_url [ad_urlencode $page_name]
+            # page_name
+            if { $page_name eq "" && $page_id eq "" } {
+                set page_name "[clock format [clock seconds] -format %Y%m%d-%X]"
+            } elseif { $page_name eq "" } {
+                set page_name "${page_id}"
             } else {
-                set next_mode v
+                set page_name [string range $page_name 0 39]
+            }
+            # page_title 
+            if { $page_title eq "" && $page_id eq "" } {
+                set page_title "[clock format [clock seconds] -format %Y%m%d-%X]"
+            } elseif { $page_title eq "" } {
+                set page_title "${page_id}"
+            } else {
+                set page_title [string range $page_title 0 79]
             }
             set validated 1
+            if { $mode eq "n" } {
+                set mode w
+            }
             ns_log Notice "q-wiki.tcl validated for $mode"
         }
         default {
@@ -237,32 +257,25 @@ if { $form_posted } {
             # a different user_id makes new context based on current context, otherwise modifies same context
             # or create a new context if no context provided.
             # given:
-            if { [string length $page_contents] > 0 && $page_contents ne $page_contents_default } {
-                
-                
-                if { $input_array(page_name) eq "" && $page_id eq "" } {
-                    set page_name "[clock format [clock seconds] -format %Y%m%d-%X]"
-                } elseif { $input_array(page_name) eq "" } {
-                    set page_name "${page_id}"
-                } else {
-                    set page_name $input_array(page_name)
+           
+            # create or write page
+            if { $page_id eq "" } {
+                # create page
+                set page_id [qw_page_create $page_url $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_template_id $page_flags $package_id $user_id]
+                if { $page_id == 0 } {
+                    ns_log Warning "q-wiki/q-wiki.tcl page write error for page_url '${page_url}'"
+                    lappend user_messag_list "There was an error creating the wiki page at '${page_url}'."
                 }
-                # page_title 
-                if { $input_array(page_title) eq "" && $page_id eq "" } {
-                    set page_title "[clock format [clock seconds] -format %Y%m%d-%X]"
-                } elseif { $input_array(page_title) eq "" } {
-                    set page_title "${page_id}"
-                } else {
-                    set page_title $input_array(page_title)
+            } else {
+                # write page
+                set success_p [qw_page_write $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_id $page_template_id $page_flags $package_id $user_id]
+                if { $success_p == 0 } {
+                    ns_log Warning "q-wiki/q-wiki.tcl page write error for page_url '${page_url}'"
+                    lappend user_messag_list "There was an error creating the wiki page at '${page_url}'."
                 }
-                # page_comments Comments
-                set page_comments $input_array(page_comments)
-                # page_contents
-                
-                qw_page_create $page_name $page_title $page_contents $keywords $description $page_comments $page_template_id $page_flags $package_id $user_id
-                
             }
-            
+            # switch modes..
+           
             set mode $next_mode
             set next_mode ""
         }
@@ -498,6 +511,8 @@ switch -exact -- $mode {
     }
     v {
         #  view page(s) (standard, html page document/report)
+
+# if page_url is different than ad_conn url stem, 303/305 redirect to page_id's primary page_url
         ns_log Notice "q-wiki.tcl mode = $mode ie. view table"
         if { [qf_is_natural_number $page_id] && $write_p } {
             lappend menu_list [list edit "${url}?page_id=${page_id}&mode=e"]
