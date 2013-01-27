@@ -25,8 +25,8 @@ CREATE TABLE qw_wiki_page (
         -- object_id of mounted instance (context_id)
         user_id integer,
         -- user_id of user that created page
-        name varchar(40),
-        title varchar(80),
+        name varchar(300),
+        title varchar(300),
         keywords varchar(100),
         description varchar(1000),
         trashed varchar(1),
@@ -45,7 +45,8 @@ create index qw_wiki_page_user_id_idx on qw_wiki_page (user_id);
 create index qw_wiki_page_trashed_idx on qw_wiki_page (trashed);
 
 CREATE TABLE qw_page_url_map (
-        url varchar(300) not null,
+        -- max size must consider url encoding all qw_wiki_page.name characters
+        url varchar(903) not null,
         page_id integer not null,
         --  should be a value from qw_wiki_page.id
         trashed varchar(1),

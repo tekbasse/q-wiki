@@ -1,7 +1,11 @@
+# q-wiki/q-wiki.tcl
+# this page split into MVC components:
+#  inputs (controller), actions (model), and outputs (view) sections
+
+# INPUTS / CONTROLLER
 # set defaults
 # template_id is first page_id, subsequent revisions have same template_id, but new page_id
 # flags are blank -- an unused db column / page attribute for extending the app for use cases
-
 # url has to be a given (not validated), since this page may be fed $url via an index.vuh
 
 set title "Q-Wiki"
@@ -58,6 +62,9 @@ if { $form_posted } {
     if { [info exists input_array(y) ] } {
         unset input_array(y)
     }
+    if { ![qf_is_natural_number $page_id] } {
+        set page_id ""
+    }
 
     set validated 0
     # validate input
@@ -65,7 +72,7 @@ if { $form_posted } {
     # determine input completeness
 
     # Modes
-    # d = delete (template_id or page_id) then view list
+    # d = delete (template_id or page_id) then view as list
     # e = edit template_id (current page_id of template_id) (follows with w, perhaps preceeds also)
     # l = list of pages (current page_ids of instance_id)
     # n = create page (existing or new template_id, if edit has no page, it is new) ie w then v
@@ -74,38 +81,41 @@ if { $form_posted } {
     # v = view page_id (of template_id, defaults to current page_id of template_id)
     # w = write page_id of template_id, make page_id current for template_id, then view page_id (v)
 
+    # url has to come from form in order to pass info via index.vuh
+    # set conn_package_url [ad_conn package_url]
+    # set page_url [string range $url [string length $conn_package_url] end]
     # get page_id from url, if any
     set page_id_from_url [qw_page_id_from_url $page_url $package_id]
-    if { ![qf_is_natural_number $page_id] } {
-        set page_id ""
-    }
+
     if { $page_id_from_url ne "" } {
         # page exists
-        # get info to pass back to write proc
         set page_stats_list [qw_page_stats $page_id $package_id $user_id]
         set page_template_id_from_db [lindex $page_stats_list 5]
-        # special permissions can be enforced.
-        # if package parameter says each template_id is an object_id, 
-        # check user_id against object_id, otherwise check against package_id
-        # However, original_page_creation_user_id is in the db, so that instance specific
-        # user permissions can be supported.
-        # set original_user_id \[lindex $page_stats_list 11\]
 
         # check for form/db descrepencies
-        if { $page_id ne $page_id_from_url } {
+        if { $page_id ne "" && $page_id ne $page_id_from_url } {
             set  mode v
             set next_mode ""
             ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' ne page_id_from_url '$page_id_from_url' "
             set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
-        if { $page_template ne "" && $page_template_id ne $page_template_id_from_db } {
+        if { $page_template_id ne "" && $page_template_id ne $page_template_id_from_db } {
             set mode v
             set next_mode ""
             ns_log Notice "q-wiki/q-wiki.tcl page_template_id '${page_template_id}' ne page_template_id_from_db '${page_template_id_from_db}'"
             set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
+
+        # get info to pass back to write proc
+
+        # This is a place to enforce application specific permissions.
+        # If package parameter says each template_id is an object_id, 
+        # check user_id against object_id, otherwise check against package_id
+        # However, original_page_creation_user_id is in the db, so that instance specific
+        # user permissions can be supported.
+        # set original_user_id \[lindex $page_stats_list_of_template_id 11\]
     }
-    # validate input for specific mode    
+    # validate input values for specific modes
     switch -exact -- $mode {
         d {
             if { [qw_page_id_exists $page_id $package_id] } {
@@ -139,40 +149,39 @@ if { $form_posted } {
             } 
         }
         e {
-            # validate for new and existing pages
-            set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
-            set flagged_list [list ]
-            # page_title 
-            if { $page_title eq "" && $page_id eq "" } {
+            # validate for new and existing pages. 
+            # For new pages, template_id will be blank.
+            # For revisions, page_id will be blank.
+
+            # page_title cannot be blank
+            if { $page_title eq "" && $template_id eq "" } {
                 set page_title "[clock format [clock seconds] -format %Y%m%d-%X]"
             } elseif { $page_title eq "" } {
-                set page_title "${page_id}"
+                set page_title "${template_id}"
             } else {
-                set page_title [string range $page_title 0 79]
+                set page_title_length [parameter::get -package_id $package_id -parameter PageTitleLen -default 80]
+                incr page_title_length -1
+                set page_title [string range $page_title 0 $page_title_length]
             }
-            # page_name
-            if { $page_name eq "" && $page_id eq "" } {
-                set page_name $page_title
-            } elseif { $page_name eq "" } {
-                set page_name "${page_id}"
-            } else {
-                set page_name [string range $page_name 0 39]
-            }
-            # page_url page_id template_id
-            # information from connection includes page_id, page_template_id
-            # set conn_package_url [ad_conn package_url]
-            # set page_url [string range $url [string length $conn_package_url] end]
 
-
-            # info from db, via connection url
-
-
-            } else {
-                # new page, page_id eq ""
+            if { $template_id eq "" } {
+                # this is a new page
                 set page_url [ad_urlencode $page_name]
-                set template_id ""
-                set page_flags ""
+                set page_id ""
+            } else {
+                # Want to enforce unchangeable urls for pages?
+                # If so, set url from db for template_id here.
             }
+
+            # page_name is pretty version of url, cannot be blank
+            if { $page_name eq "" } {
+                set page_name $url
+            } else {
+                set page_name_length [parameter::get -package_id $package_id -parameter PageNameLen -default 40]
+                incr page_name_length -1
+                set page_name [string range $page_name 0 $page_name_length]
+            }
+
             set validated 1
             if { $mode eq "n" } {
                 set mode w
@@ -189,10 +198,10 @@ if { $form_posted } {
                 set next_mode ""
             } 
         }
-        
     }
     #^ end switch
 
+# ACTIONS, PROCESSES / MODEL
     if { $validated } {
         # execute process using validated input
         # IF is used instead of SWITCH, so multiple sub-modes can be processed as a single mode.
@@ -221,6 +230,8 @@ if { $form_posted } {
             set next_mode ""
         }
         if { $mode eq "w" } {
+            set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
+            set flagged_list [list ]
             if { $allow_adp_tcl_p } {
                 # screen page_contents before write
                 set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
@@ -316,7 +327,7 @@ if { $write_p } {
     lappend menu_list [list new ?mode=n]
 }
 
-# create page
+# OUTPUT / VIEW
 switch -exact -- $mode {
     e {
         #  edit...... edit/form mode of current context
@@ -542,70 +553,10 @@ switch -exact -- $mode {
         # it's called in validation section.
     }
     default {
-        set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
-        # page_contents
-
-        #  screen existing content 
-        if { $allow_adp_tcl_p } {
-            # screen page_contents
-            set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
-            set allowed_proc_list [split [parameter::get -package_id $package_id -parameter AllowedProc]]
-            set flagged_list [list ]
-            set code_block_list [qf_tag_contents_list '<%' '%>' $page_contents]
-            foreach code_block $code_block_list {
-                set code_segments_list [qf_tcl_code_parse_lines_list $code_block]
-                foreach code_segment $code_segments_list  {
-                    set executable_fragment_list [split $code_segment "["]
-                    set executable_list [list ]
-                    foreach executable_fragment $executable_fragment_list {
-                        # clip it to just the executable for screening purposes
-                        set space_idx [string first " " $executable_fragment]
-                        if { $space_idx > -1 } {
-                            set end_idx [expr { $space_idx - 1 } ]
-                            set executable [string range $executable_fragment 0 $end_idx]
-                        } else {
-                            set executable $executable_fragment
-                        }
-                        # screen executable
-                        if { [lsearch -glob $allowed_proc_list] > -1 } {
-                            foreach banned_proc $banned_proc_list {
-                                set banned_proc_exp {[^a-z0-9_]}
-                                append banned_proc_exp $banned_proc
-                                append banned_proc_exp {[^a-z0-9_]}
-                                if { [regexp $banned_proc_exp " $executable " scratch] } {
-                                    # banned executable found
-                                    lappend flagged_list $executable
-                                    ns_log Warning "q-wiki.tcl(549) blocked executable '$executable' found in page $page_id."
-                                }
-                            }            
-                        } else {
-                            lappend flagged_list $executable
-                            ns_log Warning "q-wiki.tcl(555) blocked executable '$executable' found in page $page_id."
-                        }
-                    }
-                }
-            }
-            if { [llength $flagged_list] == 0 } {
-                # content passed filters
-                set page_contents_filtered $page_contents
-            } else {
-                set page_contents_filtered ""
-                ns_log Notice "q-wiki.tcl(564) trashing page $page_id due to existing banned procs."
-                qw_page_trash $trash $page_id
-            }
-        } else {
-            set page_contents_list [qf_remove_tag_contents '<%' '%>' $page_contents]
-            set page_contents_filtered ""
-            foreach page_segment $page_contents_list {
-                append page_contents_filtered $page_segment
-            }
-        }
-        # set page_contents_filtered was $page_contents
-
 
         # page_contents_filtered
         set page_main_code [template::adp_compile -string $page_contents_filtered]
-        set page_main_code_html [template::adp_eval page_main_code]
+        set page_main_code_html [template::adp_eval $page_main_code]
         
     }
 }
