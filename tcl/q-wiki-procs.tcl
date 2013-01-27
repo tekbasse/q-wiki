@@ -61,14 +61,16 @@ ad_proc -public qw_page_create {
         set user_id [ad_conn user_id]
         set untrusted_user_id [ad_conn untrusted_user_id]
     }
+    set return_page_id 0
     set create_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege create]
     ns_log Notice "qw_page_create: create_p $create_p"
     if { $create_p } {
         set page_id [db_nextval qw_page_id_seq]
         ns_log Notice "qw_page_create: new page_id $page_id"
-        set page_exists_p [db_0or1row wiki_page_get_id {select name from qw_wiki_page where id = :page_id } ]
-        set url_exists_p [db_0or1row wiki_url_get_id { select page_id from qw_page_url_map where url = :url } ]
-        if { !$page_exists_p && !$url_exists_p } {
+        set page_exists_p [db_0or1row wiki_page_get_id {select name from qw_wiki_page where id = :page_id and instance_id = :instance_id } ]
+        set page_url_exists_p [db_0or1row wiki_url_get_page_id {select page_id from qw_page_url_map where url = :url and instance_id = :instance_id } ]
+        set page_id_exists_p [db_0or1row wiki_url_get_id { select page_id from qw_page_url_map where url = :url and instance_id = :instance_id } ]
+        if { !$page_exists_p && !$page_id_exists_p && !$page_url_exists_p } {
             if { $template_id eq "" } {
                 set template_id $page_id
             }
@@ -82,17 +84,17 @@ ad_proc -public qw_page_create {
                 db_dml wiki_page_url_create { insert into qw_page_url_map
                     ( url, page_id, trashed, instance_id )
                     values ( :url, :page_id, :trashed_p, :instance_id ) }
-
+            set return_page_id $page_id
 #            \} on_error \{
-                set page_id 0
-                ns_log Error "qw_page_create: general psql error during db_dml"
+#                set return_page_id 0
+#                ns_log Error "qw_page_create: general psql error during db_dml"
 #            \}
         } else {
-            set page_id 0
+            set return_page_id 0
             ns_log Warning "qw_page_create: page already exists for page_id $page_id"
         }
     }
-    return $page_id
+    return $return_page_id
 }
 
 ad_proc -public qw_page_stats { 
