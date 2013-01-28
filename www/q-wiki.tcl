@@ -70,15 +70,21 @@ if { $form_posted } {
     # cleanse data, verify values for consistency
     # determine input completeness
 
-    # Modes
-    # d = delete (template_id or page_id) then view as list
-    # e = edit template_id (current page_id of template_id) (follows with w, perhaps preceeds also)
-    # l = list of pages (current page_ids of instance_id)
-    # n = create page (existing or new template_id, if edit has no page, it is new) ie w then v
-    # r = revisions list of page (page_ids with same template_id)
-    # t = trash (template_id or page_id)
-    # v = view page_id (of template_id, defaults to current page_id of template_id)
-    # w = write page_id of template_id, make page_id current for template_id, then view page_id (v)
+    # Modes are views, or one of these compound action/views
+    # d delete (d x) then view as before (where x = l, r or v)
+    # t trash (d x) then view as before (where x = l, r or v)
+    # w write (d x) , then view page_id (v)
+
+# Actions
+    # d = delete template_id or page_id
+    # t = trash template_id or page_id
+    # w = write page_id,template_id, make new page_id for template_id
+# Views
+    # e = edit page_url, presents defaults if page doesn't exist
+    # v = view page_url
+    # l = list pages of instance
+    # r = view/edit page_url revisions
+    # default = 404 return
 
     # url has to come from form in order to pass info via index.vuh
     # set conn_package_url [ad_conn package_url]
@@ -363,7 +369,7 @@ switch -exact -- $mode {
     }
     l {
         #  list...... presents a list of pages
-        ns_log Notice "q-wiki.tcl mode = $mode ie. list of pages, index"
+        ns_log Notice "q-wiki.tcl(366): mode = $mode ie. list of pages, index"
         append title " index" 
         # show page
         # sort by template_id, columns
