@@ -36,7 +36,6 @@ array set input_array [list \
 
 set user_message_list [list ]
 
-
 # get previous form inputs if they exist
 set form_posted [qf_get_inputs_as_array input_array]
 
@@ -83,9 +82,9 @@ if { $form_posted } {
 
     # url has to come from form in order to pass info via index.vuh
     # set conn_package_url [ad_conn package_url]
-    # set page_url [string range $url [string length $conn_package_url] end]
+    # set url [string range $url [string length $conn_package_url] end]
     # get page_id from url, if any
-    set page_id_from_url [qw_page_id_from_url $page_url $package_id]
+    set page_id_from_url [qw_page_id_from_url $url $package_id]
 
     if { $page_id_from_url ne "" } {
         # page exists
@@ -166,7 +165,7 @@ if { $form_posted } {
 
             if { $template_id eq "" } {
                 # this is a new page
-                set page_url [ad_urlencode $page_name]
+                set url [ad_urlencode $page_name]
                 set page_id ""
             } else {
                 # Want to enforce unchangeable urls for pages?
@@ -204,7 +203,7 @@ if { $form_posted } {
 # ACTIONS, PROCESSES / MODEL
     if { $validated } {
         # execute process using validated input
-        # IF is used instead of SWITCH, so multiple sub-modes can be processed as a single mode.
+        # IF is used instead of SWITCH, so multiple sub-modes can be processed in a single mode.
         if { $mode eq "d" } {
             #  delete.... removes context     
             ns_log Notice "q-wiki.tcl mode = delete"
@@ -232,8 +231,9 @@ if { $form_posted } {
         if { $mode eq "w" } {
             set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
             set flagged_list [list ]
+
             if { $allow_adp_tcl_p } {
-                # screen page_contents before write
+                # filter page_contents for allowed and banned procs in adp tags
                 set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
                 set allowed_proc_list [split [parameter::get -package_id $package_id -parameter AllowedProc]]
 
@@ -279,13 +279,14 @@ if { $form_posted } {
                     set page_contents_filtered ""
                 }
             } else {
+                # filtering out all adp tags
                 set page_contents_list [qf_remove_tag_contents '<%' '%>' $page_contents]
                 set page_contents_filtered ""
                 foreach page_segment $page_contents_list {
                     append page_contents_filtered $page_segment
                 }
             }
-            # use page_contents_filtered, was $page_contents
+            # use $page_contents_filtered, was $page_contents
             set page_contents $page_contents_filtered
             
             if { [llength $flagged_list ] > 0 } {
@@ -299,17 +300,17 @@ if { $form_posted } {
                 # create or write page
                 if { $page_id eq "" } {
                     # create page
-                    set page_id [qw_page_create $page_url $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_template_id $page_flags $package_id $user_id]
+                    set page_id [qw_page_create $url $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_template_id $page_flags $package_id $user_id]
                     if { $page_id == 0 } {
-                        ns_log Warning "q-wiki/q-wiki.tcl page write error for page_url '${page_url}'"
-                        lappend user_messag_list "There was an error creating the wiki page at '${page_url}'."
+                        ns_log Warning "q-wiki/q-wiki.tcl page write error for url '${url}'"
+                        lappend user_messag_list "There was an error creating the wiki page at '${url}'."
                     }
                 } else {
                     # write page
                     set success_p [qw_page_write $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_id $page_template_id $page_flags $package_id $user_id]
                     if { $success_p == 0 } {
-                        ns_log Warning "q-wiki/q-wiki.tcl page write error for page_url '${page_url}'"
-                        lappend user_messag_list "There was an error creating the wiki page at '${page_url}'."
+                        ns_log Warning "q-wiki/q-wiki.tcl page write error for url '${url}'"
+                        lappend user_messag_list "There was an error creating the wiki page at '${url}'."
                     }
                 }
                 # switch modes..
@@ -328,45 +329,33 @@ if { $write_p } {
 }
 
 # OUTPUT / VIEW
+# using switch, because there's only one view at a time
 switch -exact -- $mode {
     e {
         #  edit...... edit/form mode of current context
         ns_log Notice "q-wiki.tcl mode = edit"
         append title " edit"
-        #requires page_id
-        
-        # get table from ID
-        
-        
-        qf_form action q-wiki/index method get id 20120721
-        qf_input type hidden value n name mode label ""
-        
-        if { [qf_is_natural_number $page_id] } {
-            set page_stats_list [qw_page_stats $page_id]
-            set page_name [lindex $page_stats_list 0]
-            set page_title [lindex $page_stats_list 1]
-            set page_comments [lindex $page_stats_list 2]
-            set page_flags [lindex $page_stats_list 6]
-            set page_template_id [lindex $page_stats_list 5]
-            
-            set page_lists [qss_page_read $page_id]
-            set page_contents [qss_lists_to_text $page_lists]
-            
-            qf_input type hidden value $page_id name page_id label ""
-            qf_input type hidden value $page_flags name page_flags label ""
-            qf_input type hidden value $page_template_id name page_template_id label ""
-            qf_append html "<h3>Q-Wiki page edit</h3>"
-            qf_append html "<div style=\"width: 70%; text-align: right;\">"
-            qf_input type text value $page_name name page_name label "Name:" size 40 maxlength 40
-            qf_append html "<br>"
-            qf_input type text value $page_title name page_title label "Title:" size 40 maxlength 80
-            qf_append html "<br>"
-            qf_textarea value $page_comments cols 40 rows 3 name page_comments label "Comments:"
-            qf_append html "<br>"
-            qf_textarea value $page_contents cols 40 rows 6 name page_contents label "Contents:"
-            qf_append html "</div>"
-        }
-        
+        # for existing pages, add template_id
+        qf_form action q-wiki/index method get id 20130128
+        qf_input type hidden value w name mode label ""
+        qf_input type hidden value v name next_mode label ""
+        qf_input type hidden value $page_flags name page_flags label ""
+        qf_input type hidden value $templat_id name template_id label ""
+#        qf_input type hidden value $page_id name page_id label ""
+        qf_append html "<h3>Q-Wiki page edit</h3>"
+        qf_append html "<div style=\"width: 70%; text-align: right;\">"
+        qf_input type text value $page_name name page_name label "Name:" size 40 maxlength 40
+        qf_append html "<br>"
+        qf_input type text value $page_title name page_title label "Title:" size 40 maxlength 80
+        qf_append html "<br>"
+        qf_textarea value $description cols 40 rows 1 name description label "Description:"
+        qf_append html "<br>"
+        qf_textarea value $page_comments cols 40 rows 3 name page_comments label "Comments:"
+        qf_append html "<br>"
+        qf_textarea value $page_contents cols 40 rows 6 name page_contents label "Contents:"
+        qf_append html "<br>"
+        qf_input type text value $keywords name keywords label "Keywords:" size 40 maxlength 80
+        qf_append html "</div>"
         qf_input type submit value "Save"
         qf_close
         set form_html [qf_read]
@@ -520,7 +509,7 @@ switch -exact -- $mode {
     v {
         #  view page(s) (standard, html page document/report)
 
-# if page_url is different than ad_conn url stem, 303/305 redirect to page_id's primary page_url
+# if $url is different than ad_conn url stem, 303/305 redirect to page_id's primary url
         ns_log Notice "q-wiki.tcl mode = $mode ie. view table"
         if { [qf_is_natural_number $page_id] && $write_p } {
             lappend menu_list [list edit "${url}?page_id=${page_id}&mode=e"]
