@@ -1,6 +1,6 @@
 # q-wiki/q-wiki.tcl
 # this page split into MVC components:
-#  inputs (controller), actions (model), and outputs (view) sections
+#  inputs/observations (controller), actions (model), and outputs/reports (view) sections
 
 # INPUTS / CONTROLLER
 # set defaults
@@ -100,13 +100,13 @@ if { $form_posted } {
 
         # check for form/db descrepencies
         if { $page_id ne "" && $page_id ne $page_id_from_url } {
-            set  mode v
+            set  mode ""
             set next_mode ""
             ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' ne page_id_from_url '$page_id_from_url' "
             set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
         if { $page_template_id ne "" && $page_template_id ne $page_template_id_from_db } {
-            set mode v
+            set mode ""
             set next_mode ""
             ns_log Notice "q-wiki/q-wiki.tcl page_template_id '${page_template_id}' ne page_template_id_from_db '${page_template_id_from_db}'"
             set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
@@ -122,7 +122,10 @@ if { $form_posted } {
         # set original_user_id \[lindex $page_stats_list_of_template_id 11\]
     }
     # validate input values for specific modes
-    # failovers for permissions follow reverse order: admin_p delete_p write_p create_p read_p
+    # failovers for permissions follow reverse order (skipping ok): admin_p delete_p write_p create_p read_p
+    # possibilities are: d, t, w, e, v, l, r, "" where "" is unreconcilable error condition.
+    # switch includes    d, l, r, t, e, ""
+    # switch needs: w, v
     switch -exact -- $mode {
         d {
             if { $delete_p } {
