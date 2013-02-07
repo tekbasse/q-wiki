@@ -1,8 +1,14 @@
 # q-wiki/q-wiki.tcl
+# part of the Q-Wiki package 
+# depends on OpenACS website toolkit at OpenACS.org
+# copyrigh t
+# released under GPL license
 # this page split into MVC components:
 #  inputs/observations (controller), actions (model), and outputs/reports (view) sections
 
+
 # INPUTS / CONTROLLER
+
 # set defaults
 # template_id is first page_id, subsequent revisions have same template_id, but new page_id
 # flags are blank -- an unused db column / page attribute for extending the app for use cases
@@ -91,12 +97,16 @@ if { $form_posted } {
     # set conn_package_url [ad_conn package_url]
     # set url [string range $url [string length $conn_package_url] end]
     # get page_id from url, if any
+    if { $url eq "" } {
+        set url "index"
+    }
     set page_id_from_url [qw_page_id_from_url $url $package_id]
-
+    
     if { $page_id_from_url ne "" } {
         # page exists
         set page_stats_list [qw_page_stats $page_id $package_id $user_id]
         set page_template_id_from_db [lindex $page_stats_list 5]
+        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db $page_temmplate_id_from_db"
 
         # check for form/db descrepencies
         if { $page_id ne "" && $page_id ne $page_id_from_url } {
@@ -131,7 +141,7 @@ if { $form_posted } {
     # failovers for permissions follow reverse order (skipping ok): admin_p delete_p write_p create_p read_p
     # possibilities are: d, t, w, e, v, l, r, "" where "" is invalid input or unreconcilable error condition.
     # options include    d, l, r, t, e, "", w, v
-    
+    ns_log Notice "q-wiki/www/q-wiki.tcl(141): initial mode $mode, next_mode $next_mode"
     if { $mode eq "d" } {
         if { $delete_p } {
             ns_log Notice "q-wiki.tcl validated for d"
@@ -150,6 +160,9 @@ if { $form_posted } {
         } elseif { $read_p } {
             # give the user a chance to save their changes elsewhere instead of erasing the input
             set mode "e"
+        } else {
+            set mode ""
+            set next_mode ""
         }
     }
     if { $mode eq "r" } {
@@ -183,7 +196,10 @@ if { $form_posted } {
         # For new pages, template_id will be blank.
         # For revisions, page_id will be blank.
         set template_exists_p [qw_page_id_exists $page_template_id]
-        if { $write_p || ( $create_p && $page_template_id eq "" ) } {
+        if { !$template_exists_p } {
+            set page_template_id ""
+        }
+        if { $write_p || ( $create_p && !$template_exists_p ) } {
             
             # page_title cannot be blank
             if { $page_title eq "" && $page_template_id eq "" } {
@@ -196,15 +212,21 @@ if { $form_posted } {
                 set page_title [string range $page_title 0 $page_title_length]
             }
             
-            if { $page_template_id eq "" } {
+            if { $page_template_id eq "" && $page_name ne "" } {
                 # this is a new page
                 set url [ad_urlencode $page_name]
                 set page_id ""
-            } else {
+            } elseif { $page_template_id eq "" } {
+                if { [regexp -nocase -- {[^a-z0-9\%\_\-\.]} $url] } {
+                    # url contains unencoded characters
+                    set url [ad_urlencode $url]
+                    set page_id ""
+                }
+                
                 # Want to enforce unchangeable urls for pages?
                 # If so, set url from db for template_id here.
             }
-            
+            ns_log Notice "q-wiki.tcl(226): url $url"
             # page_name is pretty version of url, cannot be blank
             if { $page_name eq "" } {
                 set page_name $url
@@ -629,7 +651,8 @@ switch -exact -- $mode {
         # return 404 not found or not validated (permission or other issue)
         # this should use the base from the config.tcl file
         if { [llength $user_message_list ] == 0 } {
-            rp_internal_redirect /www/global/404.adp
+            ns_returnnotfound
+            #  rp_internal_redirect /www/global/404.adp
             ad_script_abort
         }
     }
