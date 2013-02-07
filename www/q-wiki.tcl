@@ -182,21 +182,21 @@ if { $form_posted } {
         # validate for new and existing pages. 
         # For new pages, template_id will be blank.
         # For revisions, page_id will be blank.
-        set template_exists_p [qw_page_id_exists $template_id]
-        if { $write_p || ( $create_p && $template_id eq "" ) } {
+        set template_exists_p [qw_page_id_exists $page_template_id]
+        if { $write_p || ( $create_p && $page_template_id eq "" ) } {
             
             # page_title cannot be blank
-            if { $page_title eq "" && $template_id eq "" } {
+            if { $page_title eq "" && $page_template_id eq "" } {
                 set page_title "[clock format [clock seconds] -format %Y%m%d-%X]"
             } elseif { $page_title eq "" } {
-                set page_title "${template_id}"
+                set page_title "${page_template_id}"
             } else {
                 set page_title_length [parameter::get -package_id $package_id -parameter PageTitleLen -default 80]
                 incr page_title_length -1
                 set page_title [string range $page_title 0 $page_title_length]
             }
             
-            if { $template_id eq "" } {
+            if { $page_template_id eq "" } {
                 # this is a new page
                 set url [ad_urlencode $page_name]
                 set page_id ""
@@ -553,7 +553,7 @@ switch -exact -- $mode {
             qf_input type hidden value w name mode label ""
             qf_input type hidden value v name next_mode label ""
             qf_input type hidden value $page_flags name page_flags label ""
-            qf_input type hidden value $templat_id name template_id label ""
+            qf_input type hidden value $page_template_id name page_template_id label ""
             #        qf_input type hidden value $page_id name page_id label ""
             qf_append html "<h3>Q-Wiki page edit</h3>"
             qf_append html "<div style=\"width: 70%; text-align: right;\">"
