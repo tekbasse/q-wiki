@@ -120,111 +120,130 @@ if { $form_posted } {
         # However, original_page_creation_user_id is in the db, so that instance specific
         # user permissions can be supported.
         # set original_user_id \[lindex $page_stats_list_of_template_id 11\]
+
+    } elseif { $write_p && $mode ne "l" } {
+        # page does not exist
+        # present an edit/new page
+        set mode "e"
+        set next_mode ""
     }
     # validate input values for specific modes
     # failovers for permissions follow reverse order (skipping ok): admin_p delete_p write_p create_p read_p
-    # possibilities are: d, t, w, e, v, l, r, "" where "" is unreconcilable error condition.
-    # switch includes    d, l, r, t, e, ""
-    # switch needs: w, v
-    switch -exact -- $mode {
-        d {
-            if { $delete_p } {
-                ns_log Notice "q-wiki.tcl validated for d"
-                set validated_p 1
-            } elseif { $read_p } {
-                set mode "l"
-                set next_mode ""
-            } else {
-                set mode ""
-                set next_mode ""
-            }
-        }
-        l {
-            if { $read_p } {
-                set validated_p 1
-                ns_log Notice "q-wiki.tcl validated for l"
-            } else {
-                set mode ""
-                set next_mode ""
-            }
-        }
-        r {
-            if { $read_p } {
-                if { [qw_page_id_exists $page_id $package_id] } {
-                    set validated_p 1
-                    ns_log Notice "q-wiki.tcl validated for r"
-                } else {
-                    # This is a 404 return, but we list pages for more convenient UI
-                    lappend user_message_list "Page not found. Showing a list of choices."
-                    set mode "l"
-                }
-            } else {
-                set mode ""
-            }
+    # possibilities are: d, t, w, e, v, l, r, "" where "" is invalid input or unreconcilable error condition.
+    # options include    d, l, r, t, e, "", w, v
+    
+    if { $mode eq "d" } {
+        if { $delete_p } {
+            ns_log Notice "q-wiki.tcl validated for d"
+            set validated_p 1
+        } elseif { $read_p } {
+            set mode "l"
             set next_mode ""
-        }
-        t {
-            if { $write_p && [qw_page_id_exists $page_id $package_id] } {
-                set validated_p 1
-                ns_log Notice "q-wiki.tcl validated for t"
-            } elseif { $read_p } {
-                set mode "l"
-            } else {
-                set mode ""
-            }
+        } else {
+            set mode ""
             set next_mode ""
-        }
-        e {
-            # validate for new and existing pages. 
-            # For new pages, template_id will be blank.
-            # For revisions, page_id will be blank.
-            set template_exists_p [qw_page_id_exists $template_id]
-            if { $write_p || ( $create_p && $template_id eq "" ) } {
-
-                # page_title cannot be blank
-                if { $page_title eq "" && $template_id eq "" } {
-                    set page_title "[clock format [clock seconds] -format %Y%m%d-%X]"
-                } elseif { $page_title eq "" } {
-                    set page_title "${template_id}"
-                } else {
-                    set page_title_length [parameter::get -package_id $package_id -parameter PageTitleLen -default 80]
-                    incr page_title_length -1
-                    set page_title [string range $page_title 0 $page_title_length]
-                }
-                
-                if { $template_id eq "" } {
-                    # this is a new page
-                    set url [ad_urlencode $page_name]
-                    set page_id ""
-                } else {
-                    # Want to enforce unchangeable urls for pages?
-                    # If so, set url from db for template_id here.
-                }
-                
-                # page_name is pretty version of url, cannot be blank
-                if { $page_name eq "" } {
-                    set page_name $url
-                } else {
-                    set page_name_length [parameter::get -package_id $package_id -parameter PageNameLen -default 40]
-                    incr page_name_length -1
-                    set page_name [string range $page_name 0 $page_name_length]
-                }
-                set validated_p 1
-                ns_log Notice "q-wiki.tcl validated for $mode"
-            } elseif { $read_p && $template_exists_p } {
-                set mode v
-                set next_mode ""
-            } else {
-                set mode ""
-                set next_mode ""
-            }
-        }
-        default {
         }
     }
-    #^ end switch
+    if { $mode eq "w" } {
+        if { $write_p } {
+            
+        } elseif { $read_p } {
+            # give the user a chance to save their changes elsewhere instead of erasing the input
+            set mode "e"
+        }
+    }
+    if { $mode eq "r" } {
+        if { $write_p } {
+            if { [qw_page_id_exists $page_id $package_id] } {
+                set validated_p 1
+                ns_log Notice "q-wiki.tcl validated for r"
+            } elseif { $read_p } {
+                # This is a 404 return, but we list pages for more convenient UI
+                lappend user_message_list "Page not found. Showing a list of choices."
+                set mode "l"
+            }
+        } else {
+            set mode ""
+        }
+        set next_mode ""
+    }
+    if { $mode eq "t" } {
+        if { $write_p && [qw_page_id_exists $page_id $package_id] } {
+            set validated_p 1
+            ns_log Notice "q-wiki.tcl validated for t"
+        } elseif { $read_p } {
+            set mode "l"
+        } else {
+            set mode ""
+        }
+        set next_mode ""
+    }
+    if { $mode eq "e" } {
+        # validate for new and existing pages. 
+        # For new pages, template_id will be blank.
+        # For revisions, page_id will be blank.
+        set template_exists_p [qw_page_id_exists $template_id]
+        if { $write_p || ( $create_p && $template_id eq "" ) } {
+            
+            # page_title cannot be blank
+            if { $page_title eq "" && $template_id eq "" } {
+                set page_title "[clock format [clock seconds] -format %Y%m%d-%X]"
+            } elseif { $page_title eq "" } {
+                set page_title "${template_id}"
+            } else {
+                set page_title_length [parameter::get -package_id $package_id -parameter PageTitleLen -default 80]
+                incr page_title_length -1
+                set page_title [string range $page_title 0 $page_title_length]
+            }
+            
+            if { $template_id eq "" } {
+                # this is a new page
+                set url [ad_urlencode $page_name]
+                set page_id ""
+            } else {
+                # Want to enforce unchangeable urls for pages?
+                # If so, set url from db for template_id here.
+            }
+            
+            # page_name is pretty version of url, cannot be blank
+            if { $page_name eq "" } {
+                set page_name $url
+            } else {
+                set page_name_length [parameter::get -package_id $package_id -parameter PageNameLen -default 40]
+                incr page_name_length -1
+                set page_name [string range $page_name 0 $page_name_length]
+            }
+            set validated_p 1
+            ns_log Notice "q-wiki.tcl validated for $mode"
+        } elseif { $read_p && $template_exists_p } {
+            set mode v
+            set next_mode ""
+        } else {
+            set mode ""
+            set next_mode ""
+        }
+    }
+    if { $mode eq "l" } {
+        if { $read_p } {
+            set validated_p 1
+            ns_log Notice "q-wiki.tcl validated for l"
+        } else {
+            set mode ""
+            set next_mode ""
+        }
+    }
+    if { $mode eq "v" } {
+        if { $read_p } {
+            # url vetted previously
+        } else {
+            set mode ""
+            set next_mode ""
+        }
+    }
 
-# ACTIONS, PROCESSES / MODEL
+
+    # ACTIONS, PROCESSES / MODEL
+
     if { $validated_p } {
         # execute process using validated input
         # IF is used instead of SWITCH, so multiple sub-modes can be processed in a single mode.
@@ -348,7 +367,11 @@ if { $form_posted } {
             } else {
                 # does not have permission to write
                 lappend user_message_list "Write operation could not be completed. You don't have permission."
-                set mode "v"
+                if { $read_p } {
+                    set mode "v"
+                } else {
+                    set mode ""
+                }
             }
             # end section of write
             set next_mode ""
@@ -365,39 +388,6 @@ if { $write_p } {
 # OUTPUT / VIEW
 # using switch, because there's only one view at a time
 switch -exact -- $mode {
-    e {
-        if { $write_p } {
-            #  edit...... edit/form mode of current context
-            ns_log Notice "q-wiki.tcl mode = edit"
-            append title " edit"
-            # for existing pages, add template_id
-            qf_form action q-wiki/index method get id 20130128
-            qf_input type hidden value w name mode label ""
-            qf_input type hidden value v name next_mode label ""
-            qf_input type hidden value $page_flags name page_flags label ""
-            qf_input type hidden value $templat_id name template_id label ""
-            #        qf_input type hidden value $page_id name page_id label ""
-            qf_append html "<h3>Q-Wiki page edit</h3>"
-            qf_append html "<div style=\"width: 70%; text-align: right;\">"
-            qf_input type text value $page_name name page_name label "Name:" size 40 maxlength 40
-            qf_append html "<br>"
-            qf_input type text value $page_title name page_title label "Title:" size 40 maxlength 80
-            qf_append html "<br>"
-            qf_textarea value $description cols 40 rows 1 name description label "Description:"
-            qf_append html "<br>"
-            qf_textarea value $page_comments cols 40 rows 3 name page_comments label "Comments:"
-            qf_append html "<br>"
-            qf_textarea value $page_contents cols 40 rows 6 name page_contents label "Contents:"
-            qf_append html "<br>"
-            qf_input type text value $keywords name keywords label "Keywords:" size 40 maxlength 80
-            qf_append html "</div>"
-            qf_input type submit value "Save"
-            qf_close
-            set form_html [qf_read]
-        } else {
-            lappend user_message_list "Edit operation could not be completed. You don't have permission."
-        }
-    }
     l {
         #  list...... presents a list of pages
         if { $read_p } {
@@ -471,7 +461,8 @@ switch -exact -- $mode {
                 append page_stats_html $page_trashed_html
             }
         } else {
-            # does not have permission to read. 
+            # does not have permission to read. This should not happen.
+            ns_log Warning "q-wiki.tcl:(465) user did not get expected 404 error when not able to read page."
         }
     }
     r {
@@ -548,7 +539,41 @@ switch -exact -- $mode {
                 append page_stats_html $page_trashed_html
             }
         } else {
-            # no permission to write or edit page
+            # no permission to write or edit page. This should not happen.
+            ns_log Warning "q-wiki.tcl:(543) user did not get expected error when not able to write page."
+        }
+    }
+    e {
+        if { $write_p } {
+            #  edit...... edit/form mode of current context
+            ns_log Notice "q-wiki.tcl mode = edit"
+            append title " edit"
+            # for existing pages, add template_id
+            qf_form action q-wiki/index method get id 20130128
+            qf_input type hidden value w name mode label ""
+            qf_input type hidden value v name next_mode label ""
+            qf_input type hidden value $page_flags name page_flags label ""
+            qf_input type hidden value $templat_id name template_id label ""
+            #        qf_input type hidden value $page_id name page_id label ""
+            qf_append html "<h3>Q-Wiki page edit</h3>"
+            qf_append html "<div style=\"width: 70%; text-align: right;\">"
+            qf_input type text value $page_name name page_name label "Name:" size 40 maxlength 40
+            qf_append html "<br>"
+            qf_input type text value $page_title name page_title label "Title:" size 40 maxlength 80
+            qf_append html "<br>"
+            qf_textarea value $description cols 40 rows 1 name description label "Description:"
+            qf_append html "<br>"
+            qf_textarea value $page_comments cols 40 rows 3 name page_comments label "Comments:"
+            qf_append html "<br>"
+            qf_textarea value $page_contents cols 40 rows 6 name page_contents label "Contents:"
+            qf_append html "<br>"
+            qf_input type text value $keywords name keywords label "Keywords:" size 40 maxlength 80
+            qf_append html "</div>"
+            qf_input type submit value "Save"
+            qf_close
+            set form_html [qf_read]
+        } else {
+            lappend user_message_list "Edit operation could not be completed. You don't have permission."
         }
     }
     v {
@@ -559,6 +584,12 @@ switch -exact -- $mode {
             if { [qf_is_natural_number $page_id] && $write_p } {
                 lappend menu_list [list edit "${url}?page_id=${page_id}&mode=e"]
                 set menu_e_p 1
+                if { $delete_p } {
+                    lappend menu_list [list delete ${url}?mode=d]
+                } else {
+                    # can only trash revisions, not entire page
+                    lappend menu_list [list revisions ${url}?mode=r]
+                }
             } else {
                 set menu_e_p 0
             }
@@ -584,7 +615,8 @@ switch -exact -- $mode {
             set page_main_code_html [template::adp_eval $page_main_code]
             
         } else {
-            # no permission to read page
+            # no permission to read page. This should not happen.
+            ns_log Warning "q-wiki.tcl:(619) user did not get expected 404 error when not able to read page."
         }
     }
     w {
@@ -595,7 +627,7 @@ switch -exact -- $mode {
     }
     default {
         # return 404 not found or not validated (permission or other issue)
-        # this should use the base from the config.tcl file, or present an edit page if write_p is true
+        # this should use the base from the config.tcl file
         if { [llength $user_message_list ] == 0 } {
             rp_internal_redirect /www/global/404.adp
             ad_script_abort
