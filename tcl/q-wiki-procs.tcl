@@ -76,15 +76,18 @@ ad_proc -public qw_page_create {
             }
             set trashed_p 0
 #            db_transaction \{
+ns_log Notice "qw_page_create: wiki_page_create id '$page_id' template_id '$template_id' name '$name' instance_id '$instance_id' user_id '$user_id'"
                 db_dml wiki_page_create { insert into qw_wiki_page
                     (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id)
                     values (:page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id) }
                 
                 # add entry to qw_page_url_map
+ns_log Notice "qw_page_create: wiki_page_url_create url '$url' page_id '$page_id' trashed_p '$trashed_p' instance_id '$instance_id'"
                 db_dml wiki_page_url_create { insert into qw_page_url_map
                     ( url, page_id, trashed, instance_id )
                     values ( :url, :page_id, :trashed_p, :instance_id ) }
             set return_page_id $page_id
+
 #            \} on_error \{
 #                set return_page_id 0
 #                ns_log Error "qw_page_create: general psql error during db_dml"
@@ -225,10 +228,12 @@ ad_proc -public qw_page_write {
         if { $page_exists_p } {
             set old_page_id $page_id
             set new_page_id [db_nextval qw_page_id_seq]
+ns_log Notice "qw_page_write: wiki_page_create id '$page_id' template_id '$template_id' name '$name' instance_id '$instance_id' user_id '$user_id'"
             db_transaction {
                 db_dml wiki_page_create { insert into qw_wiki_page
                     (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id)
                     values (:new_page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id) }
+ns_log Notice "qw_page_create: wiki_page_id_update page_id '$new_page_id' instance_id '$instance_id' old_page_id '$old_page_id'"
                 db_dml wiki_page_id_update { update qw_page_url_map
                     set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
             } on_error {

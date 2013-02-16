@@ -18,6 +18,7 @@ set title "Q-Wiki"
 
 set package_id [ad_conn package_id]
 set user_id [ad_conn user_id]
+set read_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege read]
 set write_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege write]
 set admin_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege admin]
 set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
@@ -60,7 +61,7 @@ set page_comments $input_array(page_comments)
 set page_contents $input_array(page_contents)
 set mode $input_array(mode)
 set next_mode $input_array(next_mode)
-
+ns_log Notice "q-wiki.tcl(63): mode $mode next_mode $next_mode"
 if { $form_posted } {
     if { [info exists input_array(x) ] } {
         unset input_array(x)
@@ -121,7 +122,7 @@ if { $form_posted } {
             ns_log Notice "q-wiki/q-wiki.tcl page_template_id '${page_template_id}' ne page_template_id_from_db '${page_template_id_from_db}'"
             set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
-
+ns_log Notice "q-wiki.tcl(124): mode $mode next_mode $next_mode"
         # get info to pass back to write proc
 
         # This is a place to enforce application specific permissions.
@@ -131,7 +132,7 @@ if { $form_posted } {
         # user permissions can be supported.
         # set original_user_id \[lindex $page_stats_list_of_template_id 11\]
 
-    } elseif { $write_p && $mode ne "l" } {
+    } elseif { $write_p && $mode ne "l" && $mode ne "w" } {
         # page does not exist
         # present an edit/new page
         set mode "e"
@@ -154,9 +155,10 @@ if { $form_posted } {
             set next_mode ""
         }
     }
+ns_log Notice "q-wiki.tcl(157): mode $mode next_mode $next_mode"
     if { $mode eq "w" } {
         if { $write_p } {
-            
+            set validated_p 1
         } elseif { $read_p } {
             # give the user a chance to save their changes elsewhere instead of erasing the input
             set mode "e"
@@ -165,6 +167,7 @@ if { $form_posted } {
             set next_mode ""
         }
     }
+ns_log Notice "q-wiki.tcl(169): mode $mode next_mode $next_mode"
     if { $mode eq "r" } {
         if { $write_p } {
             if { [qw_page_id_exists $page_id $package_id] } {
@@ -180,6 +183,7 @@ if { $form_posted } {
         }
         set next_mode ""
     }
+ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
     if { $mode eq "t" } {
         if { $write_p && [qw_page_id_exists $page_id $package_id] } {
             set validated_p 1
@@ -191,6 +195,7 @@ if { $form_posted } {
         }
         set next_mode ""
     }
+ns_log Notice "q-wiki.tcl(197): mode $mode next_mode $next_mode"
     if { $mode eq "e" } {
         # validate for new and existing pages. 
         # For new pages, template_id will be blank.
@@ -245,6 +250,7 @@ if { $form_posted } {
             set next_mode ""
         }
     }
+ns_log Notice "q-wiki.tcl(252): mode $mode next_mode $next_mode"
     if { $mode eq "l" } {
         if { $read_p } {
             set validated_p 1
@@ -254,6 +260,7 @@ if { $form_posted } {
             set next_mode ""
         }
     }
+ns_log Notice "q-wiki.tcl(262): mode $mode next_mode $next_mode"
     if { $mode eq "v" } {
         if { $read_p } {
             # url vetted previously
@@ -265,8 +272,9 @@ if { $form_posted } {
 
 
     # ACTIONS, PROCESSES / MODEL
-
+ns_log Notice "q-wiki.tcl(268): mode $mode next_mode $next_mode validated $validated_p"
     if { $validated_p } {
+        ns_log Notice "q-wiki.tcl Executing validated action mode $mode"
         # execute process using validated input
         # IF is used instead of SWITCH, so multiple sub-modes can be processed in a single mode.
         if { $mode eq "d" } {
@@ -298,15 +306,17 @@ if { $form_posted } {
         }
         if { $mode eq "w" } {
             if { $write_p } {
+                ns_log Notice "q-wiki.tcl permission to write the write.."
                 set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
                 set flagged_list [list ]
                 
                 if { $allow_adp_tcl_p } {
+                    ns_log Notice "q-wki.tcl(311): adp tags allowed. Fine grain filtering.."
                     # filter page_contents for allowed and banned procs in adp tags
                     set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
                     set allowed_proc_list [split [parameter::get -package_id $package_id -parameter AllowedProc]]
                     
-                    set code_block_list [qf_tag_contents_list '<%' '%>' $page_contents]
+                    set code_block_list [qf_get_contents_from_tags_list '<%' '%>' $page_contents]
                     foreach code_block $code_block_list {
                         set code_segments_list [qf_tcl_code_parse_lines_list $code_block]
                         foreach code_segment $code_segments_list  {
@@ -349,6 +359,7 @@ if { $form_posted } {
                     }
                 } else {
                     # filtering out all adp tags
+                    ns_log Notice "q-wiki.tcl(358): filtering out adp tags"
                     set page_contents_list [qf_remove_tag_contents '<%' '%>' $page_contents]
                     set page_contents_filtered ""
                     foreach page_segment $page_contents_list {
@@ -359,6 +370,7 @@ if { $form_posted } {
                 set page_contents $page_contents_filtered
                 
                 if { [llength $flagged_list ] > 0 } {
+                    ns_log Notice "q-wiki.tcl(369): content flagged, changing to edit mode."
                     set mode e
                 } else {
                     # write the data
@@ -383,12 +395,13 @@ if { $form_posted } {
                         }
                     }
                     # switch modes..
-                    
+                    ns_log Notice "q-wiki.tcl(396): activating next mode $next_mode"
                     set mode $next_mode
                 }
             } else {
                 # does not have permission to write
                 lappend user_message_list "Write operation could not be completed. You don't have permission."
+                ns_log Notice "q-wiki.tcl(402) User attempting to write content without permission."
                 if { $read_p } {
                     set mode "v"
                 } else {
@@ -400,7 +413,7 @@ if { $form_posted } {
         }
     }
 }
-
+ns_log Notice "q-wiki.tcl(405): mode = $mode ie. list of pages, index"
 
 set menu_list [list [list Q-Wiki index]]
 if { $write_p } {
@@ -413,7 +426,7 @@ switch -exact -- $mode {
     l {
         #  list...... presents a list of pages
         if { $read_p } {
-            ns_log Notice "q-wiki.tcl(366): mode = $mode ie. list of pages, index"
+            ns_log Notice "q-wiki.tcl(427): mode = $mode ie. list of pages, index"
             append title " index" 
             # show page
             # sort by template_id, columns
@@ -568,14 +581,18 @@ switch -exact -- $mode {
     e {
         if { $write_p } {
             #  edit...... edit/form mode of current context
+
             ns_log Notice "q-wiki.tcl mode = edit"
             append title " edit"
             # for existing pages, add template_id
-            qf_form action q-wiki/index method get id 20130128
-            qf_input type hidden value w name mode label ""
-            qf_input type hidden value v name next_mode label ""
-            qf_input type hidden value $page_flags name page_flags label ""
-            qf_input type hidden value $page_template_id name page_template_id label ""
+            set conn_package_url [ad_conn package_url]
+            set post_url [file join $conn_package_url $url]
+ns_log Notice "q-wiki.tcl conn_package_url $conn_package_url post_url $post_url"
+            qf_form action $post_url method get id 20130128
+            qf_input type hidden value w name mode
+            qf_input type hidden value v name next_mode
+            qf_input type hidden value $page_flags name page_flags
+            qf_input type hidden value $page_template_id name page_template_id
             #        qf_input type hidden value $page_id name page_id label ""
             qf_append html "<h3>Q-Wiki page edit</h3>"
             qf_append html "<div style=\"width: 70%; text-align: right;\">"
@@ -671,6 +688,6 @@ if { $validated_p } {
         set menu_url [lindex $item_list 1]
         append menu_html "<a href=\"${menu_url}\">${menu_label}</a>&nbsp;"
     }
-    set doc(title) $title
-    set context [list $title]
 } 
+set doc(title) $title
+set context [list $title]
