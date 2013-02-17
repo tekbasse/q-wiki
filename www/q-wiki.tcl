@@ -107,7 +107,7 @@ if { $form_posted } {
         # page exists
         set page_stats_list [qw_page_stats $page_id $package_id $user_id]
         set page_template_id_from_db [lindex $page_stats_list 5]
-        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db $page_temmplate_id_from_db"
+        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db $page_template_id_from_db"
 
         # check for form/db descrepencies
         if { $page_id ne "" && $page_id ne $page_id_from_url } {
@@ -195,6 +195,13 @@ ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
         }
         set next_mode ""
     }
+
+    if { $write_p && $mode eq "" && $next_mode eq "" } {
+        # page is blank
+        # switch to edit mode automatically
+        set mode "e"
+    } 
+
 ns_log Notice "q-wiki.tcl(197): mode $mode next_mode $next_mode"
     if { $mode eq "e" } {
         # validate for new and existing pages. 
@@ -269,7 +276,6 @@ ns_log Notice "q-wiki.tcl(262): mode $mode next_mode $next_mode"
             set next_mode ""
         }
     }
-
 
     # ACTIONS, PROCESSES / MODEL
 ns_log Notice "q-wiki.tcl(268): mode $mode next_mode $next_mode validated $validated_p"
@@ -651,7 +657,7 @@ ns_log Notice "q-wiki.tcl conn_package_url $conn_package_url post_url $post_url"
             }
             # page_contents_filtered
             set page_main_code [template::adp_compile -string $page_contents_filtered]
-            set page_main_code_html [template::adp_eval $page_main_code]
+            set page_main_code_html [template::adp_eval page_main_code]
             
         } else {
             # no permission to read page. This should not happen.
