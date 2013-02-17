@@ -78,8 +78,8 @@ ad_proc -public qw_page_create {
 #            db_transaction \{
 ns_log Notice "qw_page_create: wiki_page_create id '$page_id' template_id '$template_id' name '$name' instance_id '$instance_id' user_id '$user_id'"
                 db_dml wiki_page_create { insert into qw_wiki_page
-                    (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id)
-                    values (:page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id) }
+                    (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id,last_modified,created)
+                    values (:page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id,current_timestamp,current_timestamp) }
                 
                 # add entry to qw_page_url_map
 ns_log Notice "qw_page_create: wiki_page_url_create url '$url' page_id '$page_id' trashed_p '$trashed_p' instance_id '$instance_id'"
@@ -231,8 +231,8 @@ ad_proc -public qw_page_write {
 ns_log Notice "qw_page_write: wiki_page_create id '$page_id' template_id '$template_id' name '$name' instance_id '$instance_id' user_id '$user_id'"
             db_transaction {
                 db_dml wiki_page_create { insert into qw_wiki_page
-                    (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id)
-                    values (:new_page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id) }
+                    (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id, last_modified, created)
+                    values (:new_page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id, current_timestamp, current_timestamp) }
 ns_log Notice "qw_page_create: wiki_page_id_update page_id '$new_page_id' instance_id '$instance_id' old_page_id '$old_page_id'"
                 db_dml wiki_page_id_update { update qw_page_url_map
                     set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }

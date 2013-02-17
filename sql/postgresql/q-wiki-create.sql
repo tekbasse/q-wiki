@@ -32,6 +32,7 @@ CREATE TABLE qw_wiki_page (
         trashed varchar(1),
         popularity integer,
         flags varchar(12),
+        -- this is only diffferent from created when flags or trashed change since changes to visible content create new page revisions
         last_modified timestamptz,
         created timestamptz,
         content text,
