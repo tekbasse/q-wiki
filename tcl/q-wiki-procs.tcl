@@ -15,6 +15,7 @@ ad_proc -public qw_page_id_exists {
         # set instance_id package_id
         set instance_id [ad_conn package_id]
     }
+    
     set page_exists_p [db_0or1row wiki_page_get_id {select name from qw_wiki_page where id = :page_id and instance_id = :instance_id } ]
     return $page_exists_p
 }
@@ -29,12 +30,18 @@ ad_proc -public qw_page_id_from_url {
         # set instance_id package_id
         set instance_id [ad_conn package_id]
     }
-
-    set page_exists_p [db_0or1row wiki_page_get_url_from_id {select url from qw_page_url_map where url = :page_url and instance_id = :instance_id } ]
-    if { !$page_exists_p } {
-        set url ""
+    set user_id [ad_conn user_id]
+    set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]    
+    if { $write_p } {
+        # okay to return trashed pages
+        set page_exists_p [db_0or1row wiki_page_get_id_from_url {select page_id from qw_page_url_map where url = :page_url and instance_id = :instance_id } ]
+    } else {
+        set page_exists_p [db_0or1row wiki_page_get_id_from_url {select page_id from qw_page_url_map where url = :page_url and instance_id = :instance_id and not ( trashed = '1' ) } ]
     }
-    return $url
+    if { !$page_exists_p } {
+        set page_id ""
+    }
+    return $page_id
 }
 
 ad_proc -public qw_page_create { 

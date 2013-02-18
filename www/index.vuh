@@ -20,14 +20,15 @@ array set input_array [list \
                            page_contents_default ""\
                            submit "" \
                            reset "" \
-                           mode "" \
+                           mode "v" \
                            next_mode "" \
+                           url_referring ""\
                           ]
 set query_key_list [array names input_array]
 
 set form_posted [qf_get_inputs_as_array input_array]
 set input_array(url) $conn_path_url
-
+set input_array(url_referring) "index.vuh"
 # re-post data to new location
 foreach query_key $query_key_list {
     rp_form_put $query_key $input_array(${query_key})
@@ -37,4 +38,5 @@ foreach query_key $query_key_list {
 }
 rp_internal_redirect /packages/q-wiki/www/q-wiki
 ad_script_abort
+
 

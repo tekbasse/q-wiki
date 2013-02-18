@@ -46,9 +46,6 @@ set title $input_array(page_title)
 
 # get previous form inputs if they exist
 set form_posted [qf_get_inputs_as_array input_array]
-
-set url $input_array(url)
-# page_template_id and page_id gets checked against db for added security
 set page_id $input_array(page_id)
 set page_template_id $input_array(page_template_id)
 
@@ -61,24 +58,34 @@ set page_comments $input_array(page_comments)
 set page_contents $input_array(page_contents)
 set mode $input_array(mode)
 set next_mode $input_array(next_mode)
+
+# Is this a redirect from index.vuh ?
+set file_name [file tail [ad_conn file]]
+if { $input_array(url_referring) eq "index.vuh" && $file_name eq "q-wiki.adp" } {
+    # index.vuh should be replaced with a session continuity key passed via db.
+    # If url is internal_redirecting from index.vuh, url should be same as:
+    # set url [ad_conn path_info]
+    set url $input_array(url)
+} elseif { $file_name eq "index.vuh" } {
+    # is this code executing inside index.vuh?
+    set url [ad_conn path_info]
+    ns_log Notice "q-wiki.tcl(29): file_name ${file_name}. Setting url to $url"
+} else {
+    # A serious assumption has broken.
+    ns_log Warning "q-wiki.tcl(75): quit with referr_url and file_name out of boundary. Check log for request details."
+    ns_returnnotfound
+    #  rp_internal_redirect /www/global/404.adp
+    ad_script_abort
+}
+if { $url eq "" } {
+    set url "index"
+}
+set page_id_from_url [qw_page_id_from_url $url $package_id]
+if { $page_id_from_url ne "" && ![qf_is_natural_number $page_id_from_url] } {
+ns_log Notice "q-wiki.tcl(62): page_id_from_url '$page_id_from_url'"
+}
 ns_log Notice "q-wiki.tcl(63): mode $mode next_mode $next_mode"
-if { $form_posted } {
-    if { [info exists input_array(x) ] } {
-        unset input_array(x)
-    }
-    if { [info exists input_array(y) ] } {
-        unset input_array(y)
-    }
-    if { ![qf_is_natural_number $page_id] } {
-        set page_id ""
-    }
-
-    set validated_p 0
-    # validate input
-    # cleanse data, verify values for consistency
-    # determine input completeness
-
-    # Modes are views, or one of these compound action/views
+# Modes are views, or one of these compound action/views
     # d delete (d x) then view as before (where x = l, r or v)
     # t trash (d x) then view as before (where x = l, r or v)
     # w write (d x) , then view page_id (v)
@@ -98,10 +105,23 @@ if { $form_posted } {
     # set conn_package_url [ad_conn package_url]
     # set url [string range $url [string length $conn_package_url] end]
     # get page_id from url, if any
-    if { $url eq "" } {
-        set url "index"
+
+if { $form_posted } {
+    if { [info exists input_array(x) ] } {
+        unset input_array(x)
     }
-    set page_id_from_url [qw_page_id_from_url $url $package_id]
+    if { [info exists input_array(y) ] } {
+        unset input_array(y)
+    }
+    if { ![qf_is_natural_number $page_id] } {
+        set page_id ""
+    }
+
+    set validated_p 0
+    # validate input
+    # cleanse data, verify values for consistency
+    # determine input completeness
+
     
     if { $page_id_from_url ne "" } {
         # page exists
@@ -109,6 +129,7 @@ if { $form_posted } {
         set page_template_id_from_db [lindex $page_stats_list 5]
         ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db $page_template_id_from_db"
 
+        # page_template_id and page_id gets checked against db for added security
         # check for form/db descrepencies
         if { $page_id ne "" && $page_id ne $page_id_from_url } {
             set  mode ""
@@ -122,7 +143,13 @@ if { $form_posted } {
             ns_log Notice "q-wiki/q-wiki.tcl page_template_id '${page_template_id}' ne page_template_id_from_db '${page_template_id_from_db}'"
             set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
-ns_log Notice "q-wiki.tcl(124): mode $mode next_mode $next_mode"
+        
+        # A blank referrer means a direct request
+        # otherwise make sure referrer is from same domain when editing
+        set referrer_url [get_referrer]
+
+
+        ns_log Notice "q-wiki.tcl(124): mode $mode next_mode $next_mode"
         # get info to pass back to write proc
 
         # This is a place to enforce application specific permissions.
@@ -137,7 +164,10 @@ ns_log Notice "q-wiki.tcl(124): mode $mode next_mode $next_mode"
         # present an edit/new page
         set mode "e"
         set next_mode ""
-    }
+        set validated_p 1
+    } 
+    # else should default to 404 at switch in View section.
+
     # validate input values for specific modes
     # failovers for permissions follow reverse order (skipping ok): admin_p delete_p write_p create_p read_p
     # possibilities are: d, t, w, e, v, l, r, "" where "" is invalid input or unreconcilable error condition.
@@ -155,7 +185,7 @@ ns_log Notice "q-wiki.tcl(124): mode $mode next_mode $next_mode"
             set next_mode ""
         }
     }
-ns_log Notice "q-wiki.tcl(157): mode $mode next_mode $next_mode"
+    ns_log Notice "q-wiki.tcl(157): mode $mode next_mode $next_mode"
     if { $mode eq "w" } {
         if { $write_p } {
             set validated_p 1
@@ -167,7 +197,7 @@ ns_log Notice "q-wiki.tcl(157): mode $mode next_mode $next_mode"
             set next_mode ""
         }
     }
-ns_log Notice "q-wiki.tcl(169): mode $mode next_mode $next_mode"
+    ns_log Notice "q-wiki.tcl(169): mode $mode next_mode $next_mode"
     if { $mode eq "r" } {
         if { $write_p } {
             if { [qw_page_id_exists $page_id $package_id] } {
@@ -183,7 +213,7 @@ ns_log Notice "q-wiki.tcl(169): mode $mode next_mode $next_mode"
         }
         set next_mode ""
     }
-ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
+    ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
     if { $mode eq "t" } {
         if { $write_p && [qw_page_id_exists $page_id $package_id] } {
             set validated_p 1
@@ -196,13 +226,13 @@ ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
         set next_mode ""
     }
 
-    if { $write_p && $mode eq "" && $next_mode eq "" } {
+    if { $page_id_from_url eq "" && $write_p && $mode eq "" && $next_mode eq "" } {
         # page is blank
         # switch to edit mode automatically
         set mode "e"
     } 
 
-ns_log Notice "q-wiki.tcl(197): mode $mode next_mode $next_mode"
+    ns_log Notice "q-wiki.tcl(197): mode $mode next_mode $next_mode"
     if { $mode eq "e" } {
         # validate for new and existing pages. 
         # For new pages, template_id will be blank.
@@ -257,7 +287,7 @@ ns_log Notice "q-wiki.tcl(197): mode $mode next_mode $next_mode"
             set next_mode ""
         }
     }
-ns_log Notice "q-wiki.tcl(252): mode $mode next_mode $next_mode"
+    ns_log Notice "q-wiki.tcl(252): mode $mode next_mode $next_mode"
     if { $mode eq "l" } {
         if { $read_p } {
             set validated_p 1
@@ -267,10 +297,17 @@ ns_log Notice "q-wiki.tcl(252): mode $mode next_mode $next_mode"
             set next_mode ""
         }
     }
-ns_log Notice "q-wiki.tcl(262): mode $mode next_mode $next_mode"
+    ns_log Notice "q-wiki.tcl(262): mode $mode next_mode $next_mode"
     if { $mode eq "v" } {
         if { $read_p } {
             # url vetted previously
+            set validated_p 1
+            if { $page_id_from_url ne "" } {
+                # page exists
+            } else {
+                set mode "l"
+                ns_log Notice "q-wiki.tcl(405): mode = $mode ie. list of pages, index"
+            }
         } else {
             set mode ""
             set next_mode ""
@@ -278,7 +315,7 @@ ns_log Notice "q-wiki.tcl(262): mode $mode next_mode $next_mode"
     }
 
     # ACTIONS, PROCESSES / MODEL
-ns_log Notice "q-wiki.tcl(268): mode $mode next_mode $next_mode validated $validated_p"
+    ns_log Notice "q-wiki.tcl(268): mode $mode next_mode $next_mode validated $validated_p"
     if { $validated_p } {
         ns_log Notice "q-wiki.tcl Executing validated action mode $mode"
         # execute process using validated input
@@ -418,8 +455,11 @@ ns_log Notice "q-wiki.tcl(268): mode $mode next_mode $next_mode validated $valid
             set next_mode ""
         }
     }
+} else {
+    # form not posted
+    ns_log Warning "q-wiki.tcl(451): Form not posted. This shouldn't happen via index.vuh."
 }
-ns_log Notice "q-wiki.tcl(405): mode = $mode ie. list of pages, index"
+
 
 set menu_list [list [list Q-Wiki index]]
 if { $write_p } {
@@ -625,10 +665,12 @@ ns_log Notice "q-wiki.tcl conn_package_url $conn_package_url post_url $post_url"
         #  view page(s) (standard, html page document/report)
         if { $read_p } {
             # if $url is different than ad_conn url stem, 303/305 redirect to page_id's primary url
-            ns_log Notice "q-wiki.tcl mode = $mode ie. view"
-            if { [qf_is_natural_number $page_id] && $write_p } {
-                lappend menu_list [list edit "${url}?page_id=${page_id}&mode=e"]
-                set menu_e_p 1
+            ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
+
+            # build menu options
+            if { $page_template_id ne "" && $write_p } {
+                lappend menu_list [list edit "${url}?page_template_id=${page_template_id}&mode=e"]
+                set menu_edit_p 1
                 if { $delete_p } {
                     lappend menu_list [list delete ${url}?mode=d]
                 } else {
@@ -636,27 +678,25 @@ ns_log Notice "q-wiki.tcl conn_package_url $conn_package_url post_url $post_url"
                     lappend menu_list [list revisions ${url}?mode=r]
                 }
             } else {
-                set menu_e_p 0
+                set menu_edit_p 0
             }
-            if { [qf_is_natural_number $page_id] } {
-                set page_stats_list [qw_page_stats $page_id]
-                set page_name [lindex $page_stats_list 0]
-                set page_title [lindex $page_stats_list 1]
-                set page_comments [lindex $page_stats_list 2]
-                set page_html "<h3>${page_title} (${page_name})</h3>\n"
-                append page_html $page_contents
-                append page_html "<p>${page_comments}</p>"
-                
-                if { !$menu_e_p && $write_p } {
-                    
-                    lappend menu_list [list edit "${url}?page_id=${page_id}&mode=e"]
-                }
+
+            # get page info
+            set page_list [qw_page_read $page_id_from_url $package_id $user_id ]
+            set page_title [lindex $page_list 1]
+            set keywords [lindex $page_list 2]
+            set description [lindex $page_list 3]
+            set page_contents [lindex $page_list 11]
+
+            if { $keywords ne "" } {
+                template::head::add_meta -name keywords -content $keywords
             }
-            if { [qf_is_natural_number $page_id]  } {
-                lappend menu_list [list compute "${url}?page_id=${page_id}&mode=c"]
+            if { $description ne "" } {
+                template::head::add_meta -name description -content $description
             }
+            set title $page_title
             # page_contents_filtered
-            set page_main_code [template::adp_compile -string $page_contents_filtered]
+            set page_main_code [template::adp_compile -string $page_contents]
             set page_main_code_html [template::adp_eval page_main_code]
             
         } else {

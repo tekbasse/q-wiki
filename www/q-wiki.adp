@@ -1,10 +1,10 @@
 <master>
-  <property name="doc(title)">@title;noquote@</property>
-  <property name="title">@title;noquote@</property>
+  <property name="doc(title)">@title@</property>
+  <property name="title">@title@</property>
   <property name="context">@context;noquote@</property>
 
 <if @menu_html@ not nil>
-  @menu_html;noquote@
+  <p>@menu_html;noquote@</p>
 </if>
 
 <if @user_message_html@ not nil>
@@ -27,11 +27,5 @@
  @page_main_code_html;noquote@
 </if>
 
-<if @page_contents_filtered@ not nil>
-  @page_contents_filtered;noquote@
-</if>
-<if @page_html@ not nil>
-  @page_html;noquote@
-</if>
 
 
