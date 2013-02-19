@@ -125,9 +125,9 @@ if { $form_posted } {
     
     if { $page_id_from_url ne "" } {
         # page exists
-        set page_stats_list [qw_page_stats $page_id $package_id $user_id]
+        set page_stats_list [qw_page_stats $page_id_from_url $package_id $user_id]
         set page_template_id_from_db [lindex $page_stats_list 5]
-        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db $page_template_id_from_db"
+        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db '$page_template_id_from_db'"
 
         # page_template_id and page_id gets checked against db for added security
         # check for form/db descrepencies
@@ -135,13 +135,13 @@ if { $form_posted } {
             set  mode ""
             set next_mode ""
             ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' ne page_id_from_url '$page_id_from_url' "
-            set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
+            lappend user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
         if { $page_template_id ne "" && $page_template_id ne $page_template_id_from_db } {
             set mode ""
             set next_mode ""
             ns_log Notice "q-wiki/q-wiki.tcl page_template_id '${page_template_id}' ne page_template_id_from_db '${page_template_id_from_db}'"
-            set user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
+            lappend user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
         
         # A blank referrer means a direct request
@@ -235,7 +235,7 @@ if { $form_posted } {
     ns_log Notice "q-wiki.tcl(197): mode $mode next_mode $next_mode"
     if { $mode eq "e" } {
         # validate for new and existing pages. 
-        # For new pages, template_id will be blank.
+        # For new pages, template_id will be blank (template_exists_p == 0)
         # For revisions, page_id will be blank.
         set template_exists_p [qw_page_id_exists $page_template_id]
         if { !$template_exists_p } {
@@ -633,7 +633,21 @@ switch -exact -- $mode {
             # for existing pages, add template_id
             set conn_package_url [ad_conn package_url]
             set post_url [file join $conn_package_url $url]
-ns_log Notice "q-wiki.tcl conn_package_url $conn_package_url post_url $post_url"
+
+            ns_log Notice "q-wiki.tcl(636): conn_package_url $conn_package_url post_url $post_url"
+            if { $page_id_from_url ne "" && [llength $user_message_list ] == 0 } {
+                # get page info
+                set page_list [qw_page_read $page_id_from_url $package_id $user_id ]
+                set page_name [lindex $page_list 0]
+                set page_title [lindex $page_list 1]
+                set keywords [lindex $page_list 2]
+                set description [lindex $page_list 3]
+                set page_template_id [lindex $page_list 4]
+                set page_flags [lindex $page_list 5]
+                set page_contents [lindex $page_list 11]
+                set page_comments [lindex $page_list 12]
+            }
+
             qf_form action $post_url method get id 20130128
             qf_input type hidden value w name mode
             qf_input type hidden value v name next_mode

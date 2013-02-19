@@ -112,7 +112,7 @@ ad_proc -public qw_page_stats {
     {instance_id ""}
     {user_id ""}
 } {
-    Returns page stats as a list: name, title, comments, keywords,description, template_id, flags, trashed, popularity, time last_modified, time created, user_id
+    Returns page stats as a list: name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id
 } {
     if { $instance_id eq "" } {
         # set instance_id package_id
