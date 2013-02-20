@@ -462,9 +462,6 @@ if { $form_posted } {
 
 
 set menu_list [list [list Q-Wiki index]]
-if { $write_p } {
-    lappend menu_list [list edit ${url}?mode=e]
-}
 
 # OUTPUT / VIEW
 # using switch, because there's only one view at a time
@@ -682,8 +679,8 @@ switch -exact -- $mode {
             ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
 
             # build menu options
-            if { $page_template_id ne "" && $write_p } {
-                lappend menu_list [list edit "${url}?page_template_id=${page_template_id}&mode=e"]
+            if { $write_p } {
+                lappend menu_list [list edit "${url}?mode=e"]
                 set menu_edit_p 1
                 if { $delete_p } {
                     lappend menu_list [list delete ${url}?mode=d]
@@ -696,6 +693,9 @@ switch -exact -- $mode {
             }
 
             # get page info
+            # cannot use previous $page_id_from_url, because it might be modified from an ACTION
+            # Get it again.
+            set page_id_from_url [qw_page_id_from_url $url $package_id]
             set page_list [qw_page_read $page_id_from_url $package_id $user_id ]
             set page_title [lindex $page_list 1]
             set keywords [lindex $page_list 2]
