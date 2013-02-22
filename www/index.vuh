@@ -31,7 +31,7 @@ set input_array(url) $conn_path_url
 set input_array(url_referring) "index.vuh"
 # re-post data to new location
 foreach query_key $query_key_list {
-    rp_form_put $query_key $input_array(${query_key})
+    rp_form_put $query_key [ad_urlencode $input_array(${query_key})]
     if { $query_key eq "url" } {
         ns_log Notice "q-wiki/www/index.vuh: url $input_array(url)"
     }

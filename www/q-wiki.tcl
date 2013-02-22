@@ -61,11 +61,22 @@ set next_mode $input_array(next_mode)
 
 # Is this a redirect from index.vuh ?
 set file_name [file tail [ad_conn file]]
-if { $input_array(url_referring) eq "index.vuh" && $file_name eq "q-wiki.adp" } {
-    # index.vuh should be replaced with a session continuity key passed via db.
+if { [ns_urldecode $input_array(url_referring)] eq "index.vuh" && $file_name eq "q-wiki.adp" } {
+    # To do, when write_p == 1: index.vuh value should be replaced with a session continuity key passed via db.
+
     # If url is internal_redirecting from index.vuh, url should be same as:
     # set url [ad_conn path_info]
+
+    # url_de-encode values
     set url $input_array(url)
+    set page_name [ns_urldecode $page_name]
+    set page_title [ns_urldecode $page_title]
+    set page_flags [ns_urldecode $page_flags]
+    set keywords [ns_urldecode $keywords]
+    set description [ns_urldecode $description]
+    set page_comments [ns_urldecode $page_comments]
+    set page_contents [ns_urldecode $page_contents]
+
 } elseif { $file_name eq "index.vuh" } {
     # is this code executing inside index.vuh?
     set url [ad_conn path_info]
@@ -712,7 +723,9 @@ switch -exact -- $mode {
             # page_contents_filtered
             set page_main_code [template::adp_compile -string $page_contents]
             set page_main_code_html [template::adp_eval page_main_code]
-            
+
+# looking for source of unwanted content quoting
+            set page_main_code_html $page_contents
         } else {
             # no permission to read page. This should not happen.
             ns_log Warning "q-wiki.tcl:(619) user did not get expected 404 error when not able to read page."
