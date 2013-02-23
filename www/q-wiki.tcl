@@ -660,7 +660,7 @@ switch -exact -- $mode {
                 set page_contents [lindex $page_list 11]
                 set page_comments [lindex $page_list 12]
             }
-
+            set page_contents_unquoted [ad_unquotehtml $page_contents]
             qf_form action $post_url method get id 20130128
             qf_input type hidden value w name mode
             qf_input type hidden value v name next_mode
@@ -677,7 +677,7 @@ switch -exact -- $mode {
             qf_append html "<br>"
             qf_textarea value $page_comments cols 40 rows 3 name page_comments label "Comments:"
             qf_append html "<br>"
-            qf_textarea value $page_contents cols 40 rows 6 name page_contents label "Contents:"
+            qf_textarea value $page_contents_unquoted cols 40 rows 6 name page_contents label "Contents:"
             qf_append html "<br>"
             qf_input type text value $keywords name keywords label "Keywords:" size 40 maxlength 80
             qf_append html "</div>"
