@@ -372,12 +372,13 @@ if { $form_posted } {
                     set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
                     set allowed_proc_list [split [parameter::get -package_id $package_id -parameter AllowedProc]]
                     
-                    set code_block_list [qf_get_contents_from_tags_list '<%' '%>' $page_contents]
+                    set code_block_list [qf_get_contents_from_tags_list "<%=" "%>" $page_contents]
                     foreach code_block $code_block_list {
-                        set code_segments_list [qf_tcl_code_parse_lines_list $code_block]
+#                        set code_segments_list \[qf_tcl_code_parse_lines_list $code_block\] <-- Doesn't need to be as complicated as a separate proc.
+                        set code_segments_list [split $code_block \n\r]
                         foreach code_segment $code_segments_list  {
-                            # see filters in accounts-finance/tcl/modeling-procs.tcl
-                            set executable_fragment_list [split $code_segment "["]
+                            # see filters in accounts-finance/tcl/modeling-procs.tcl for inspiration
+                            set executable_fragment_list [split $code_segment \[]
                             set executable_list [list ]
                             foreach executable_fragment $executable_fragment_list {
                                 # clip it to just the executable for screening purposes
@@ -389,21 +390,28 @@ if { $form_posted } {
                                     set executable $executable_fragment
                                 }
                                 # screen executable
-                                if { [lsearch -glob $allowed_proc_list] > -1 } {
-                                    foreach banned_proc $banned_proc_list {
-                                        set banned_proc_exp {[^a-z0-9_]}
-                                        append banned_proc_exp $banned_proc
-                                        append banned_proc_exp {[^a-z0-9_]}
-                                        if { [regexp $banned_proc_exp " $executable " scratch] } {
-                                            # banned executable found
-                                            lappend flagged_list $executable
-                                            lappend user_message_list "'$executable' is not allowed."
-                                        }
-                                    }            
+                                if { $executable eq "" } {
+                                    # skip an empty executable, but log it just in case
+                                    ns_log Notice "q-wiki.tcl(395): executable is empty. Screening incomplete?"
                                 } else {
-                                    lappend flagged_list $executable
-                                    lappend user_message_list "'$executable' is not allowed."
+                                    ####  foreach through allowd_proc_list to glob lsearch exeutable
+                                    if { [lsearch -glob $allowed_proc_list $executable] > -1 } {
+                                        foreach banned_proc $banned_proc_list {
+                                            set banned_proc_exp {[^a-z0-9_]}
+                                            append banned_proc_exp $banned_proc
+                                            append banned_proc_exp {[^a-z0-9_]}
+                                            if { [regexp $banned_proc_exp " $executable " scratch] } {
+                                                # banned executable found
+                                                lappend flagged_list $executable
+                                                lappend user_message_list "'$executable' is not allowed (405)."
+                                            }
+                                        }            
+                                    } else {
+                                        lappend flagged_list $executable
+                                        lappend user_message_list "'$executable' is not allowed (410)."
+                                    }
                                 }
+
                             }
                         }
                     }
@@ -416,14 +424,10 @@ if { $form_posted } {
                 } else {
                     # filtering out all adp tags (allow_adp_tcl_p == 0)
                     ns_log Notice "q-wiki.tcl(358): filtering out adp tags"
-#                    ns_log Notice "q-wiki.tcl(359): range page_contents 0 120:< '[string range ${page_contents} 0 120]'"
-                    set page_contents_list [qf_remove_tag_contents '<%' '%>' $page_contents]
-                    set page_contents_filtered ""
-#                    foreach page_segment $page_contents_list {
-#                        ns_log Notice "q-wiki.tcl420: page_segment: '${page_segment}'"
-#                        append page_contents_filtered $page_segment
-#                    }
+#                    ns_log Notice "q-wiki.tcl(359): range page_contents 0 120: '[string range ${page_contents} 0 120]'"
+                    set page_contents_list [qf_remove_tag_contents "<%" "%>" $page_contents]
                     set page_contents_filtered [join $page_contents_list ""]
+#ns_log Notice "q-wiki.tcl(427): range page_contents_filtered 0 120: '[string range ${page_contents_filtered} 0 120]'"
                 }
                 # use $page_contents_filtered, was $page_contents
                 set page_contents [ad_quotehtml $page_contents_filtered]
@@ -660,7 +664,7 @@ switch -exact -- $mode {
                 set page_contents [lindex $page_list 11]
                 set page_comments [lindex $page_list 12]
             }
-            set page_contents_unquoted [ad_unquotehtml $page_contents]
+
             qf_form action $post_url method get id 20130128
             qf_input type hidden value w name mode
             qf_input type hidden value v name next_mode
@@ -669,17 +673,23 @@ switch -exact -- $mode {
             #        qf_input type hidden value $page_id name page_id label ""
             qf_append html "<h3>Q-Wiki page edit</h3>"
             qf_append html "<div style=\"width: 70%; text-align: right;\">"
-            qf_input type text value $page_name name page_name label "Name:" size 40 maxlength 40
+            set page_name_unquoted [ad_unquotehtml $page_name]
+            qf_input type text value $page_name_unquoted name page_name label "Name:" size 40 maxlength 40
             qf_append html "<br>"
-            qf_input type text value $page_title name page_title label "Title:" size 40 maxlength 80
+            set page_title_unquoted [ad_unquotehtml $page_title]
+            qf_input type text value $page_title_unquoted name page_title label "Title:" size 40 maxlength 80
             qf_append html "<br>"
-            qf_textarea value $description cols 40 rows 1 name description label "Description:"
+            set description_unquoted [ad_unquotehtml $description]
+            qf_textarea value $description_unquoted cols 40 rows 1 name description label "Description:"
             qf_append html "<br>"
-            qf_textarea value $page_comments cols 40 rows 3 name page_comments label "Comments:"
+            set page_comments_unquoted [ad_unquotehtml $page_comments]
+            qf_textarea value $page_comments_unquoted cols 40 rows 3 name page_comments label "Comments:"
             qf_append html "<br>"
+            set page_contents_unquoted [ad_unquotehtml $page_contents]
             qf_textarea value $page_contents_unquoted cols 40 rows 6 name page_contents label "Contents:"
             qf_append html "<br>"
-            qf_input type text value $keywords name keywords label "Keywords:" size 40 maxlength 80
+            set keywords_unquoted [ad_unquotehtml $keywords]
+            qf_input type text value $keywords_unquoted name keywords label "Keywords:" size 40 maxlength 80
             qf_append html "</div>"
             qf_input type submit value "Save"
             qf_close
