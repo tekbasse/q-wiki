@@ -361,6 +361,8 @@ if { $form_posted } {
         if { $mode eq "w" } {
             if { $write_p } {
                 ns_log Notice "q-wiki.tcl permission to write the write.."
+                set page_contents_quoted $page_contents
+                set page_contents [ad_unquotehtml $page_contents]
                 set allow_adp_tcl_p [parameter::get -package_id $package_id -parameter AllowADPTCL -default 0]
                 set flagged_list [list ]
                 
@@ -412,16 +414,19 @@ if { $form_posted } {
                         set page_contents_filtered ""
                     }
                 } else {
-                    # filtering out all adp tags
+                    # filtering out all adp tags (allow_adp_tcl_p == 0)
                     ns_log Notice "q-wiki.tcl(358): filtering out adp tags"
+#                    ns_log Notice "q-wiki.tcl(359): range page_contents 0 120:< '[string range ${page_contents} 0 120]'"
                     set page_contents_list [qf_remove_tag_contents '<%' '%>' $page_contents]
                     set page_contents_filtered ""
-                    foreach page_segment $page_contents_list {
-                        append page_contents_filtered $page_segment
-                    }
+#                    foreach page_segment $page_contents_list {
+#                        ns_log Notice "q-wiki.tcl420: page_segment: '${page_segment}'"
+#                        append page_contents_filtered $page_segment
+#                    }
+                    set page_contents_filtered [join $page_contents_list ""]
                 }
                 # use $page_contents_filtered, was $page_contents
-                set page_contents $page_contents_filtered
+                set page_contents [ad_quotehtml $page_contents_filtered]
                 
                 if { [llength $flagged_list ] > 0 } {
                     ns_log Notice "q-wiki.tcl(369): content flagged, changing to edit mode."
@@ -721,11 +726,10 @@ switch -exact -- $mode {
             }
             set title $page_title
             # page_contents_filtered
-            set page_main_code [template::adp_compile -string $page_contents]
+            set page_contents_unquoted [ad_unquotehtml $page_contents]
+            set page_main_code [template::adp_compile -string $page_contents_unquoted]
             set page_main_code_html [template::adp_eval page_main_code]
 
-# looking for source of unwanted content quoting
-            set page_main_code_html $page_contents
         } else {
             # no permission to read page. This should not happen.
             ns_log Warning "q-wiki.tcl:(619) user did not get expected 404 error when not able to read page."
