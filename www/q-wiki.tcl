@@ -374,14 +374,15 @@ if { $form_posted } {
                     
                     set code_block_list [qf_get_contents_from_tags_list "<%=" "%>" $page_contents]
                     foreach code_block $code_block_list {
-#                        set code_segments_list \[qf_tcl_code_parse_lines_list $code_block\] <-- Doesn't need to be as complicated as a separate proc.
+                        # split into lines
                         set code_segments_list [split $code_block \n\r]
                         foreach code_segment $code_segments_list  {
                             # see filters in accounts-finance/tcl/modeling-procs.tcl for inspiration
+                            # split at the beginning of each open square bracket
                             set executable_fragment_list [split $code_segment \[]
                             set executable_list [list ]
                             foreach executable_fragment $executable_fragment_list {
-                                # clip it to just the executable for screening purposes
+                                # right-clip to just the executable for screening purposes
                                 set space_idx [string first " " $executable_fragment]
                                 if { $space_idx > -1 } {
                                     set end_idx [expr { $space_idx - 1 } ]
@@ -391,8 +392,8 @@ if { $form_posted } {
                                 }
                                 # screen executable
                                 if { $executable eq "" } {
-                                    # skip an empty executable, but log it just in case
-                                    ns_log Notice "q-wiki.tcl(395): executable is empty. Screening incomplete?"
+                                    # skip an empty executable
+                                    # ns_log Notice "q-wiki.tcl(395): executable is empty. Screening incomplete?"
                                 } else {
                                     # see if this proc is allowed
                                     set proc_allowed_p 0
@@ -401,7 +402,7 @@ if { $form_posted } {
                                             set proc_allowed_p 1
                                         }
                                     }
-                                    # see if this proc is banned
+                                    # see if this proc is banned. Banned takes precedence over allowed.
                                     if { $proc_allowed_p } {
                                         foreach banned_proc $banned_proc_list {
                                             if { [string match $banned_proc $executable] } {
@@ -416,7 +417,6 @@ if { $form_posted } {
                                         lappend user_message_list "'$executable' is not allowed at this time."
                                     }
                                 }
-
                             }
                         }
                     }
@@ -429,10 +429,10 @@ if { $form_posted } {
                 } else {
                     # filtering out all adp tags (allow_adp_tcl_p == 0)
                     ns_log Notice "q-wiki.tcl(358): filtering out adp tags"
-#                    ns_log Notice "q-wiki.tcl(359): range page_contents 0 120: '[string range ${page_contents} 0 120]'"
+                    # ns_log Notice "q-wiki.tcl(359): range page_contents 0 120: '[string range ${page_contents} 0 120]'"
                     set page_contents_list [qf_remove_tag_contents "<%" "%>" $page_contents]
                     set page_contents_filtered [join $page_contents_list ""]
-#ns_log Notice "q-wiki.tcl(427): range page_contents_filtered 0 120: '[string range ${page_contents_filtered} 0 120]'"
+                    # ns_log Notice "q-wiki.tcl(427): range page_contents_filtered 0 120: '[string range ${page_contents_filtered} 0 120]'"
                 }
                 # use $page_contents_filtered, was $page_contents
                 set page_contents [ad_quotehtml $page_contents_filtered]

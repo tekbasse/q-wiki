@@ -241,15 +241,20 @@ ad_proc -public qw_page_write {
     set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]
     if { $write_p } {
         set page_exists_p [db_0or1row wiki_page_get_id {select user_id as creator_id from qw_wiki_page where id = :page_id } ]
+        if { $page_id_exists_p } { 
+            set page_id_stats_list [qw_page_stats $page_id $instance_id $user_id]
+            set template_id [lindex $page_id_stats_list 5]
+        }
+
         if { $page_exists_p } {
             set old_page_id $page_id
             set new_page_id [db_nextval qw_page_id_seq]
-ns_log Notice "qw_page_write: wiki_page_create id '$page_id' template_id '$template_id' name '$name' instance_id '$instance_id' user_id '$user_id'"
+            ns_log Notice "qw_page_write: wiki_page_create id '$page_id' template_id '$template_id' name '$name' instance_id '$instance_id' user_id '$user_id'"
             db_transaction {
                 db_dml wiki_page_create { insert into qw_wiki_page
                     (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id, last_modified, created)
                     values (:new_page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id, current_timestamp, current_timestamp) }
-ns_log Notice "qw_page_create: wiki_page_id_update page_id '$new_page_id' instance_id '$instance_id' old_page_id '$old_page_id'"
+                ns_log Notice "qw_page_create: wiki_page_id_update page_id '$new_page_id' instance_id '$instance_id' old_page_id '$old_page_id'"
                 db_dml wiki_page_id_update { update qw_page_url_map
                     set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
             } on_error {
@@ -260,7 +265,6 @@ ns_log Notice "qw_page_create: wiki_page_id_update page_id '$new_page_id' instan
             set success 0
             ns_log Warning "qw_page_write: no page exists for page_id $page_id"
         }
-
         set success 1
     } else {
         set success 0

@@ -9,7 +9,7 @@
     <implements-subsite-p>f</implements-subsite-p>
     <inherit-templates-p>f</inherit-templates-p>
     
-    <version name="5.81b" url="http://openacs.org/repository/download/apm/q-wiki-5.81b.apm">
+    <version name="5.85b" url="http://openacs.org/repository/download/apm/q-wiki-5.85b.apm">
         <owner url="mailto:kappa@dekka.com">Benjamin Brink</owner>
         <owner url="http://openacs.org">OpenACS Community</owner>
         <summary>A wiki and templating system</summary>
@@ -17,17 +17,17 @@
         <description format="text/plain">A wiki and templating system derived from the ecommerce product templating system.</description>
         <maturity>0</maturity>
 
-        <provides url="q-wiki" version="5.81b"/>
+        <provides url="q-wiki" version="5.85b"/>
 
         <requires url="q-forms" version="0.1d"/>
         <callbacks>
         </callbacks>
         <parameters>
-            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="AllowADPTCL"  default="1" description="Shall users be allowed to use TCL embedded in their pages using specifically &lt;% and %&gt; ADP brackets? 0 is no. 1 is yes." section_name="antispam"/>
+            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="AllowADPTCL"  default="1" description="Shall users be allowed to use TCL embedded in their pages using specifically &lt;% and %&gt; ADP brackets? 0 is no. 1 is yes." section_name="security"/>
             <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="PageTitleLen"  default="80" description="Maximum characters in a page title. Database has a limit of 300" section_name="validation"/>
-            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="PageTitleLen"  default="40" description="Maximum characters in a page name (tail of the url). Database has a limit of 300" section_name="validation"/>
-            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="BannedProc"  default="upvar uplevel proc sourcerename gets open ns_*" description="A separated list of all procedures names that cause the entire template to fail." section_name="antispam"/>
-            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="AllowedProc"  default="[qaf_* [f::* [acc_fin::*" description="A space separated list of all procedure names that people may use. Screening uses STRING MATCH, so globs are okay. See defaults for example." section_name="antispam"/>
+            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="PageNameLen"  default="40" description="Maximum characters in a page name (tail of the url). Database has a limit of 300" section_name="validation"/>
+            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="BannedProc"  default="upvar uplevel proc sourcerename gets open ns_*" description="A separated list of all procedures names that cause the entire template to fail." section_name="security"/>
+            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="AllowedProc"  default="qaf_* f::* acc_fin::* expr set" description="A space separated list of all procedure names that people may use. Screening uses STRING MATCH, so globs are okay. See defaults for example." section_name="security"/>
         </parameters>
 
     </version>
