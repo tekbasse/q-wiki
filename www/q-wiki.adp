@@ -8,7 +8,9 @@
 </if>
 
 <if @user_message_html@ not nil>
+<ul>
   @user_message_html;noquote@
+</ul>
 </if>
 
 <if @form_html@ not nil>

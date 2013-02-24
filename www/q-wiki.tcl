@@ -394,21 +394,26 @@ if { $form_posted } {
                                     # skip an empty executable, but log it just in case
                                     ns_log Notice "q-wiki.tcl(395): executable is empty. Screening incomplete?"
                                 } else {
-                                    ####  foreach through allowd_proc_list to glob lsearch exeutable
-                                    if { [lsearch -glob $allowed_proc_list $executable] > -1 } {
+                                    # see if this proc is allowed
+                                    set proc_allowed_p 0
+                                    foreach allowed_proc $allowed_proc_list {
+                                        if { [string match $allowed_proc $executable] } {
+                                            set proc_allowed_p 1
+                                        }
+                                    }
+                                    # see if this proc is banned
+                                    if { $proc_allowed_p } {
                                         foreach banned_proc $banned_proc_list {
-                                            set banned_proc_exp {[^a-z0-9_]}
-                                            append banned_proc_exp $banned_proc
-                                            append banned_proc_exp {[^a-z0-9_]}
-                                            if { [regexp $banned_proc_exp " $executable " scratch] } {
+                                            if { [string match $banned_proc $executable] } {
                                                 # banned executable found
+                                                set proc_allowed_p 0
                                                 lappend flagged_list $executable
-                                                lappend user_message_list "'$executable' is not allowed (405)."
+                                                lappend user_message_list "'$executable' is banned from use."
                                             }
                                         }            
                                     } else {
                                         lappend flagged_list $executable
-                                        lappend user_message_list "'$executable' is not allowed (410)."
+                                        lappend user_message_list "'$executable' is not allowed at this time."
                                     }
                                 }
 
@@ -419,7 +424,7 @@ if { $form_posted } {
                         # content passed filters
                         set page_contents_filtered $page_contents
                     } else {
-                        set page_contents_filtered ""
+                        set page_contents_filtered $page_contents_quoted
                     }
                 } else {
                     # filtering out all adp tags (allow_adp_tcl_p == 0)
