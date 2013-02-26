@@ -3,10 +3,11 @@
   <property name="title">@title@</property>
   <property name="context">@context;noquote@</property>
 
-<if @menu_html@ not nil>
-  <p>@menu_html;noquote@</p>
-</if>
 
+<if @menu_html@ not nil>
+  <div style="text-align: right; margin: 0; padding: 0;">@menu_html;noquote@</div>
+</if>
+<h1>@title@</h1>
 <if @user_message_html@ not nil>
 <ul>
   @user_message_html;noquote@

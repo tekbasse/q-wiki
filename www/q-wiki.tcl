@@ -486,7 +486,8 @@ if { $form_posted } {
 }
 
 
-set menu_list [list [list Q-Wiki index]]
+#set menu_list \[list \[list Q-Wiki index\]\]
+set menu_list [list ]
 
 # OUTPUT / VIEW
 # using switch, because there's only one view at a time
