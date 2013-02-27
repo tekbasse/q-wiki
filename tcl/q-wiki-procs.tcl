@@ -44,6 +44,38 @@ ad_proc -public qw_page_id_from_url {
     return $page_id
 }
 
+ad_proc -public qw_page_url_from_id { 
+    page_id
+    {instance_id ""}
+} {
+    Returns page_url if page_id exists for instance_id, else returns empty string.
+} {
+    if { $instance_id eq "" } {
+        # set instance_id package_id
+        set instance_id [ad_conn package_id]
+    }
+    set user_id [ad_conn user_id]
+    set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]    
+    if { $write_p } {
+        # okay to return trashed pages
+        set page_exists_p [db_0or1row wiki_page_get_url_from_id {select page_url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id } ]
+    } else {
+        set page_exists_p [db_0or1row wiki_page_get_url_from_id {select page_url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id and not ( trashed = '1' ) } ]
+    }
+    if { !$page_exists_p } {
+        set page_stat_list [qw_page_stats $page_id]
+        set template_id [lindex $page_stat_list 5]
+        if { $template_id ne "" } {
+            ### get page_id this way: 
+            select page_url from qw_page_url_map pum qw_wiki_page wp where pum.page_id in ( select page_id from qw_wiki_page where wp.instance_id = instance_id and template_id = :template_id )
+        } else {
+            set page_url ""
+        }
+    }
+    return $page_url
+}
+
+
 ad_proc -public qw_page_create { 
     url
     name

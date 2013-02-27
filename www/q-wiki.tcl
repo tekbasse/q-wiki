@@ -504,42 +504,44 @@ switch -exact -- $mode {
             set page_stats_lists [list ]
             set page_trashed_lists [list ]
             set cell_formating_list [list ]
-            set tables_stats_lists [list ]
+            set pages_stats_lists [list ]
             # we get the entire list, to sort it before processing
             foreach page_id $page_ids_list {
                 
                 set stats_mod_list [list $page_id]
                 set stats_orig_list [qw_page_stats $page_id]
+                #   a list: name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id
                 foreach stat $stats_orig_list {
                     lappend stats_mod_list $stat
                 }
-                # qw_stats:  name, title, keywords,description, template_id, flags, trashed, popularity, time last_modified, time created, user_id.
-                # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id 
-                lappend tables_stats_lists $stats_mod_list
+                lappend stats_mod_list [qw_page_url_from_id $page_id]
+                # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url
+                lappend pages_stats_lists $stats_mod_list
             }
-            set tables_stats_lists [lsort -index 6 -real $tables_stats_lists]
+            set pages_stats_lists [lsort -index 6 -real $pages_stats_lists]
             set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
-            foreach stats_orig_list $tables_stats_lists {
+            foreach stats_orig_list $pages_stats_lists {
                 set stats_list [lrange $stats_orig_list 0 4]
                 set page_id [lindex $stats_list 0]
                 set name [lindex $stats_list 1]
                 set template_id [lindex $stats_orig_list 6]
                 set page_user_id [lindex $stats_orig_list 12]
                 set trashed_p [lindex $stats_orig_list 8]
-                
+                set page_url [lindex $stats_orig_list 13]
                 # convert table row for use with html
                 # change name to an active link
-                set active_link "<a\ href=\"q-wiki?$p=${page_id}\">$name</a>"
+                set base_link "<a\ href=\"${page_url}\">"
+                set active_link "${base_link}$name</a>"
                 
                 if { ( $admin_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
                     set trash_label "untrash"
-                    append active_link " \[<a href=\"q-wiki?p=${page_id}&mode=t\">${trash_label}</a>\]"
+                    append active_link " \[${base_link}?mode=t\">${trash_label}</a>\]"
                 } elseif { $page_user_id == $user_id || $admin_p } {
                     set trash_label "trash"
-                    append active_link " \[<a href=\"q-wiki?$p=${page_id}&mode=t\">${trash_label}</a>\]"
+                    append active_link " \[${base_link}?mode=t\">${trash_label}</a>\]"
                 } 
                 if { $delete_p } {
-                    append active_link " \[<a href=\"q-wiki?p=${page_id}&mode=d\">delete</a>\]"
+                    append active_link " \[<a href=\"${base_link}?mode=d\">delete</a>\]"
                 } 
                 set stats_list [lreplace $stats_list 0 1 $active_link]
                 if { $trashed_p == 1 } {
@@ -577,12 +579,14 @@ switch -exact -- $mode {
             
             # show page
             # sort by template_id, columns
-            
-            set page_ids_list [qw_pages $package_id]
+            # get template_id from page_id, to confirm that this is a template_id and not a page_id (revision)
+ ### see tcl/q-wiki-procs.tcl qw_create_page for solution
+
+            set page_ids_list [qw_pages $package_id $user_id $template_id]
             set page_stats_lists [list ]
             set page_trashed_lists [list ]
             set cell_formating_list [list ]
-            set tables_stats_lists [list ]
+            set pages_stats_lists [list ]
             # we get the entire list, to sort it before processing
             foreach page_id $page_ids_list {
                 
@@ -593,11 +597,11 @@ switch -exact -- $mode {
                 }
                 # qw_stats:  name, title, keywords,description, template_id, flags, trashed, popularity, time last_modified, time created, user_id.
                 # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id 
-                lappend tables_stats_lists $stats_mod_list
+                lappend pages_stats_lists $stats_mod_list
             }
-            set tables_stats_lists [lsort -index 6 -real $tables_stats_lists]
+            set pages_stats_lists [lsort -index 6 -real $pages_stats_lists]
             set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
-            foreach stats_orig_list $tables_stats_lists {
+            foreach stats_orig_list $pages_stats_lists {
                 set stats_list [lrange $stats_orig_list 0 4]
                 set page_id [lindex $stats_list 0]
                 set name [lindex $stats_list 1]
