@@ -379,7 +379,7 @@ ad_proc -public qw_page_trash {
     {instance_id ""}
     {user_id ""}
 } {
-    page_id can be a list of page_id's. Trashes/untrashes page_id (subject to permission check).
+    Trashes/untrashes page_id (subject to permission check).
     set trash_p to 1 (default) to trash page. Set trash_p to '0' to untrash. 
     Returns 1 if successful, otherwise returns 0
 } {
@@ -391,51 +391,71 @@ ad_proc -public qw_page_trash {
         set user_id [ad_conn user_id]
         set untrusted_user_id [ad_conn untrusted_user_id]
     }
-    set delete_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege delete]
-    if { $delete_p } {
+    set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]
+    # if write_p, don't need to scope to user_id == page_user_id
+
+    # does the current, active wiki page_id need to be updated after trashing?
+    if { $trash_p } {
+        set page_id_active [db0or1row qw_url_from_page_id { select url from qw_page_id_url where page_id = :page_id and instance_id = :instance_id } ]
+    } else {
+        set page_id_active 0
+    }
+    set bulk_revision_trashing_p 0
+    if { $write_p } {
         if { $page_id > 0 } {
-            if { $trash_p } {
-                db_dml wiki_page_trash_tog { update qw_wiki_page set trashed = '1'
+            # wtr = write privilege trash revision
+            db_dml wiki_page_trash_wtr { update qw_wiki_page set trashed =:trash_p
+                where id=:page_id and instance_id =:instance_id }
+        } elseif { $temmplate_id > 0 } {
+            # wtp = write privilege trash page ie bulk trashing revisions
+            db_dml wiki_page_trash_wtp { update qw_wiki_page set trashed =:trash_p
+                where template_id=:template_id and instance_id =:instance_id }
+            set bulk_revision_trashing_p $trash_p
+        }
+    } else {
+        # a user an only trash their own entries ie make them unpublished. Does not delete
+        if { $page_id > 0 } {
+            # utr = user privilege trash revision
+            db_dml wiki_page_trash_utr { update qw_wiki_page set trashed =:trash_p
                     where id=:page_id and instance_id =:instance_id and user_id=:user_id }
-            } else {
-                db_dml wiki_page_trash_tog { update qw_wiki_page set trashed = '0'
-                    where id=:page_id and instance_id =:instance_id and user_id=:user_id }
-            } 
         } elseif { $template_id > 0 } {
-            if { $trash_p } {
-                db_dml wiki_template_trash_tog { update qw_wiki_page set trashed = '1'
-                    where template_id=:template_id and instance_id =:instance_id and user_id=:user_id }
-            } else {
-                db_dml wiki_template_trash_tog { update qw_wiki_page set trashed = '0'
-                    where template_id=:template_id and instance_id =:instance_id and user_id=:user_id }
-### also need to trash the qw_page_id_url_map
-            }
+            # utp = user privilege trash page (as many revisions as they created)
+            db_dml wiki_page_trash_utp { update qw_wiki_page set trashed =:trash_p
+                where template_id=:template_id and instance_id =:instance_id and user_id=:user_id }            
+            set bulk_revision_trashing_p $trash_p
         }
     }
+    if { $bulk_revision_trashing_p } {
+        # is active page_id still untrashed?
+        # we don't know page url or necessarily know page_id, only template_id..
+        #  feed the template_id to qw_page_url_from_id
+        set url  [qw_page_url_from_id $template_id]
+        set page_id_active [qw_page_id_from_url $url]
+        set pia_stats  [qw_page_stats $page_id_active]
+        set pia_trashed_p [lindex $pia_stats 7]
+        # if not, then set page_id_active 1 ie same as pia_trashed_p
+        set $page_id_active $pia_trashed_p
+    }
 
-    # does the current, active wiki page_id need to be updated?
-    set page_id_active [db0or1row qw_url_from_page_id { select url from qw_page_id_url where page_id = :page_id and instance_id = :instance_id } ]
     if { $page_id_active } {
-                # change the page_id
-                set template_id [lindex [qw_page_stats $page_id $instance_id] 5]
-                db0or1row qw_previous_page_id { select page_id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id and trashed = '0' order by created limit 1 }
-                if { [info exists new_page_id] } {
-                    #  point to the most recent untrashed revision
-                    db_dml wiki_page_id_update { update qw_page_url_map
-                        set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
-                } else {
-                    # point to the most recent trashed version, then trash the entire page
-                    db0or1row qw_previous_page_id { select page_id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id order by created limit 1 }
-                    if { [info exists new_page_id] } {
-                        db_dml wiki_page_id_update { update qw_page_url_map
-                            set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
-                    } 
-                    db_dml wiki_page_id_update { update qw_page_url_map
-                        set trashed = '1' where page_id = :page_id and instance_id = :instance_id }
-                }
-            }
-
-
-    return $delete_p
+        # change the page_id
+        set template_id [lindex [qw_page_stats $page_id $instance_id] 5]
+        db0or1row qw_previous_page_id { select page_id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id and trashed = '0' order by created limit 1 }
+        if { [info exists new_page_id] } {
+            #  point to the most recent untrashed revision
+            db_dml wiki_page_id_update { update qw_page_url_map
+                set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
+        } else {
+            # point to the most recent trashed version, then trash the entire page
+            db0or1row qw_previous_page_id { select page_id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id order by created limit 1 }
+            if { [info exists new_page_id] } {
+                db_dml wiki_page_id_update { update qw_page_url_map
+                    set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
+            } 
+            db_dml wiki_page_id_update { update qw_page_url_map
+                set trashed = '1' where page_id = :page_id and instance_id = :instance_id }
+        }
+    }
+    return 1
 }
 
