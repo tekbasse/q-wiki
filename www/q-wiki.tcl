@@ -501,13 +501,9 @@ switch -exact -- $mode {
             # sort by template_id, columns
             
             set page_ids_list [qw_pages $package_id]
-            set page_stats_lists [list ]
-            set page_trashed_lists [list ]
-            set cell_formating_list [list ]
             set pages_stats_lists [list ]
-            # we get the entire list, to sort it before processing
+            # we get the entire data set, 1 row(list) per page as table pages_stats_lists
             foreach page_id $page_ids_list {
-                
                 set stats_mod_list [list $page_id]
                 set stats_orig_list [qw_page_stats $page_id]
                 #   a list: name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id
@@ -518,49 +514,62 @@ switch -exact -- $mode {
                 # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url
                 lappend pages_stats_lists $stats_mod_list
             }
-            set pages_stats_lists [lsort -index 6 -real $pages_stats_lists]
-            set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
-            foreach stats_orig_list $pages_stats_lists {
-                set stats_list [lrange $stats_orig_list 0 4]
-                set page_id [lindex $stats_list 0]
-                set name [lindex $stats_list 1]
-                set template_id [lindex $stats_orig_list 6]
-                set page_user_id [lindex $stats_orig_list 12]
-                set trashed_p [lindex $stats_orig_list 8]
-                set page_url [lindex $stats_orig_list 13]
-                # convert table row for use with html
-                # change name to an active link
-                set base_link "<a\ href=\"${page_url}\">"
-                set active_link "${base_link}$name</a>"
+            set pages_stats_lists [lsort -index 2 $pages_stats_lists]
+            # build tables (list_of_lists) stats_list and their html filtered versions page_*_lists for display
+            set page_scratch_lists [list]
+            set page_stats_lists [list ]
+            set page_trashed_lists [list ]
+
+            foreach stats_mod_list $pages_stats_lists {
+                set stats_list [lrange $stats_mod_list 0 2]
+                lappend stats_list [lindex $stats_mod_list 5]
+                lappend stats_list [lindex $stats_mod_list 3]
+
+                set page_id [lindex $stats_mod_list 0]
+                set name [lindex $stats_mod_list 1]
+                set template_id [lindex $stats_mod_list 6]
+                set page_user_id [lindex $stats_mod_list 12]
+                set trashed_p [lindex $stats_mod_list 8]
+                set page_url [lindex $stats_mod_list 13]
+
+                # convert stats_list for use with html
+
+                # change Name to an active link and add actions if available
+                set active_link "<a href=\"${page_url}\">$name</a>"
                 
-                if { ( $admin_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
+                if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
                     set trash_label "untrash"
-                    append active_link " \[${base_link}?mode=t\">${trash_label}</a>\]"
-                } elseif { $page_user_id == $user_id || $admin_p } {
+                    append active_link " \[<a href=\"${page_url}?mode=t\">${trash_label}</a>\]"
+                } elseif { $page_user_id == $user_id || $write_p } {
                     set trash_label "trash"
-                    append active_link " \[${base_link}?mode=t\">${trash_label}</a>\]"
+                    append active_link " \[<a href=\"${page_url}?mode=t\">${trash_label}</a>\]"
                 } 
                 if { $delete_p } {
-                    append active_link " \[<a href=\"${base_link}?mode=d\">delete</a>\]"
+                    append active_link " \[<a href=\"${page_url}?mode=d\">delete</a>\]"
                 } 
                 set stats_list [lreplace $stats_list 0 1 $active_link]
-                if { $trashed_p == 1 } {
+
+                # add stats_list to one of the tables for display
+                if { $trashed_p && ( $write_p || $page_user_id eq $user_id ) } {
                     lappend page_trashed_lists $stats_list
+                } elseif { $trashed_p } {
+                    # ignore this row, but track for errors
                 } else {
                     lappend page_stats_lists $stats_list
                 }
-                
             }
-            # sort for now. Later, just get page_tables with same template_id
+
+            # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name Title Comments] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name Title Description Comments] ]
             set page_tag_atts_list [list border 1 cellspacing 0 cellpadding 3]
+            set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
-            # trashed
-            if { [llength $page_trashed_lists] > 0 && $write_p } {
+            # trashed table
+            if { [llength $page_trashed_lists] > 0 } {
                 set page_trashed_sorted_lists $page_trashed_lists
-                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name Title Comments] ]
-                set page_tag_atts_list [list border 1 cellspacing 0 cellpadding 3]
+                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name Title Comments &nbsp;] ]
+                set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
                 
                 set page_trashed_html "<h3>Trashed tables</h3>\n"
                 append page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]

@@ -58,16 +58,16 @@ ad_proc -public qw_page_url_from_id {
     set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]    
     if { $write_p } {
         # okay to return trashed pages
-        set page_exists_p [db_0or1row wiki_page_get_url_from_id {select page_url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id } ]
+        set page_exists_p [db_0or1row wiki_page_get_all_url_from_id {select url as page_url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id } ]
     } else {
-        set page_exists_p [db_0or1row wiki_page_get_url_from_id {select page_url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id and not ( trashed = '1' ) } ]
+        set page_exists_p [db_0or1row wiki_page_get_untrashed_url_from_id {select url as page_url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id and not ( trashed = '1' ) } ]
     }
     if { !$page_exists_p } {
         set page_stat_list [qw_page_stats $page_id]
         set template_id [lindex $page_stat_list 5]
         if { $template_id ne "" } {
-            ### get page_id this way: 
-            select page_url from qw_page_url_map pum qw_wiki_page wp where pum.page_id in ( select page_id from qw_wiki_page where wp.instance_id = instance_id and template_id = :template_id )
+            # get page_id this way: 
+            select url as page_url from qw_page_url_map where page_id in ( select id as page_id from qw_wiki_page where instance_id = :instance_id and template_id = :template_id )
         } else {
             set page_url ""
         }
@@ -170,7 +170,11 @@ ad_proc -public qw_page_stats {
         set return_list_of_lists [db_list_of_lists wiki_page_stats { select name, title, comments, keywords, description, template_id, flags, trashed, popularity, last_modified, created, user_id from qw_wiki_page where id = :page_id and instance_id = :instance_id } ] 
         # convert return_lists_of_lists to return_list
         set return_list [lindex $return_list_of_lists 0]
-        
+        # data consistency measure
+        if { [llength $return_list] > 1 && [lindex $return_list 7] eq "" } {
+            set return_list [lreplace $return_list 7 7 0]
+        }
+
     } else {
         set return_list [list ]
     }
