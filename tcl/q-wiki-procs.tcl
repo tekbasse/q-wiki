@@ -50,6 +50,7 @@ ad_proc -public qw_page_url_from_id {
 } {
     Returns page_url if page_id exists for instance_id, else returns empty string.
 } {
+    set page_url ""
     if { $instance_id eq "" } {
         # set instance_id package_id
         set instance_id [ad_conn package_id]
@@ -66,10 +67,8 @@ ad_proc -public qw_page_url_from_id {
         set page_stat_list [qw_page_stats $page_id]
         set template_id [lindex $page_stat_list 5]
         if { $template_id ne "" } {
-            # get page_id this way: 
-            select url as page_url from qw_page_url_map where page_id in ( select id as page_id from qw_wiki_page where instance_id = :instance_id and template_id = :template_id )
-        } else {
-            set page_url ""
+            # get page_url from template_id
+            db_0or1row wiki_page_get_url_from_template_id { select url as page_url from qw_page_url_map where page_id in ( select id as page_id from qw_wiki_page where instance_id = :instance_id and template_id = :template_id ) }
         }
     }
     return $page_url
