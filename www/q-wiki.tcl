@@ -226,7 +226,8 @@ if { $form_posted } {
     }
     ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
     if { $mode eq "t" } {
-        if { $write_p && [qw_page_id_exists $page_id $package_id] } {
+        if { ( $write_p || $user_id > 0 ) && [qw_page_id_exists $page_id_from_url $package_id] } {
+            # complete validation occurs while trashing.
             set validated_p 1
             ns_log Notice "q-wiki.tcl validated for t"
         } elseif { $read_p } {
@@ -239,7 +240,7 @@ if { $form_posted } {
 
     if { $page_id_from_url eq "" && $write_p && $mode eq "" && $next_mode eq "" } {
         # page is blank
-        # switch to edit mode automatically
+        # switch to edit mode automatically for users with write_p
         set mode "e"
     } 
 
