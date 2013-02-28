@@ -88,12 +88,22 @@ if { [ns_urldecode $input_array(url_referring)] eq "index.vuh" && $file_name eq 
     #  rp_internal_redirect /www/global/404.adp
     ad_script_abort
 }
+
 if { $url eq "" } {
     set url "index"
 }
-set page_id_from_url [qw_page_id_from_url $url $package_id]
+
+
+if { $write_p } {
+    set page_id_from_url [qw_page_id_from_url $url $package_id]
+} else {
+    # user can only edit or see it if it is published (not trashed)
+    set page_id_from_url [qw_page_from_url $url $package_id]
+}
+
+
 if { $page_id_from_url ne "" && ![qf_is_natural_number $page_id_from_url] } {
-ns_log Notice "q-wiki.tcl(62): page_id_from_url '$page_id_from_url'"
+    ns_log Notice "q-wiki.tcl(62): page_id_from_url '$page_id_from_url'"
 }
 ns_log Notice "q-wiki.tcl(63): mode $mode next_mode $next_mode"
 # Modes are views, or one of these compound action/views
@@ -226,7 +236,7 @@ if { $form_posted } {
     }
     ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
     if { $mode eq "t" } {
-        if { ( $write_p || $user_id > 0 ) && [qw_page_id_exists $page_id_from_url $package_id] } {
+        if { ( $write_p || $user_id > 0 ) && ([qw_page_id_exists $page_id $package_id] || [qw_page_id_exists $page_id_from_url $package_id] ) } {
             # complete validation occurs while trashing.
             set validated_p 1
             ns_log Notice "q-wiki.tcl validated for t"
@@ -235,7 +245,6 @@ if { $form_posted } {
         } else {
             set mode ""
         }
-        set next_mode ""
     }
 
     if { $page_id_from_url eq "" && $write_p && $mode eq "" && $next_mode eq "" } {
@@ -329,7 +338,7 @@ if { $form_posted } {
     # ACTIONS, PROCESSES / MODEL
     ns_log Notice "q-wiki.tcl(268): mode $mode next_mode $next_mode validated $validated_p"
     if { $validated_p } {
-        ns_log Notice "q-wiki.tcl Executing validated action mode $mode"
+        ns_log Notice "q-wiki.tcl ACTION mode $mode validated_p 1"
         # execute process using validated input
         # IF is used instead of SWITCH, so multiple sub-modes can be processed in a single mode.
         if { $mode eq "d" } {
@@ -341,24 +350,40 @@ if { $form_posted } {
             set mode $next_mode
             set next_mode ""
         }
+        ns_log Notice "q-wiki.tcl(344): mode $mode"
         if { $mode eq "t" } {
             #  toggle trash
             ns_log Notice "q-wiki.tcl mode = trash"
-            if { $write_p } {
-                set trashed_p [lindex [qw_page_stats $page_id] 7]
+            # which page to trash page_id or page_id_from_url?
+            if { ![qw_page_id_exists $page_id $package_id] } {
+                set page_id $page_id_from_url
+            }
+            set page_id_stats [qw_page_stats $page_id]
+            set trashed_p [lindex $page_id_stats 7]
+            set page_user_id [lindex $page_id_stats 11]
+#            set template_id \[lindex $page_id_stats 5\]
+            set trash_done_p 0
+            if { $write_p || $page_user_id eq $user_id } {
                 if { $trashed_p == 1 } {
                     set trash 0
                 } else {
                     set trash 1
                 }
-                qw_page_trash $trash $page_id
+                set trash_done_p [qw_page_trash $page_id $trash]
                 set mode $next_mode
-            } else {
-                lappend user_message_list "Trash operation could not be completed. You don't have permission."
+            } 
+            if { !$trash_done_p } {
+                lappend user_message_list "Item could not be trashed. You don't have permission to trash this item."
                 set mode "v"
             }
             set next_mode ""
+            # update the page_id
+            set page_id_from_url [qw_page_id_from_url $url $package_id]
+            if { $page_id_from_url ne "" && $mode eq "" } {
+                set mode "v"
+            }
         }
+        ns_log Notice "q-wiki.tcl(374): mode $mode"
         if { $mode eq "w" } {
             if { $write_p } {
                 ns_log Notice "q-wiki.tcl permission to write the write.."
@@ -492,6 +517,7 @@ set menu_list [list ]
 
 # OUTPUT / VIEW
 # using switch, because there's only one view at a time
+ns_log Notice "q-wiki.tcl(508): OUTPUT mode $mode"
 switch -exact -- $mode {
     l {
         #  list...... presents a list of pages
@@ -540,13 +566,13 @@ switch -exact -- $mode {
                 
                 if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
                     set trash_label "untrash"
-                    append active_link " \[<a href=\"${page_url}?mode=t\">${trash_label}</a>\]"
+                    append active_link " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
                 } elseif { $page_user_id == $user_id || $write_p } {
                     set trash_label "trash"
-                    append active_link " \[<a href=\"${page_url}?mode=t\">${trash_label}</a>\]"
+                    append active_link " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
                 } 
                 if { $delete_p } {
-                    append active_link " \[<a href=\"${page_url}?mode=d\">delete</a>\]"
+                    append active_link " \[<a href=\"${page_url}?mode=d&next_mode=l\">delete</a>\]"
                 } 
                 set stats_list [lreplace $stats_list 0 1 $active_link]
 
@@ -563,18 +589,18 @@ switch -exact -- $mode {
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
             set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name Title Description Comments] ]
-            set page_tag_atts_list [list border 1 cellspacing 0 cellpadding 3]
+            set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
             # trashed table
             if { [llength $page_trashed_lists] > 0 } {
                 set page_trashed_sorted_lists $page_trashed_lists
-                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name Title Comments &nbsp;] ]
+                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name Title Description Comments] ]
                 set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
                 
                 set page_trashed_html "<h3>Trashed tables</h3>\n"
                 append page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
-                append page_stats_html $page_trashed_html
+#                append page_stats_html $page_trashed_html
             }
         } else {
             # does not have permission to read. This should not happen.
