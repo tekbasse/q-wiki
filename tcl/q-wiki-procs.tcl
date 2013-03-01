@@ -48,7 +48,7 @@ ad_proc -public qw_page_url_from_id {
     page_id
     {instance_id ""}
 } {
-    Returns page_url if page_id exists for instance_id, else returns empty string.
+    Returns page_url if page_id exists for instance_id, even if page_id is not the active revision, else returns empty string.
 } {
     set page_url ""
     if { $instance_id eq "" } {
@@ -78,7 +78,7 @@ ad_proc -public qw_page_from_url {
     page_url
     {instance_id ""}
 } {
-    Returns page_url if page is published for instance_id, else returns empty string.
+    Returns page_id if page is published (untrashed) for instance_id, else returns empty string.
 } {
     if { $instance_id eq "" } {
         # set instance_id package_id
@@ -151,7 +151,7 @@ ad_proc -public qw_page_create {
             } else {
                 ns_log Notice "qw_page_create: wiki_url_update url '$url' page_id '$page_id' trashed_p '$trashed_p' instance_id '$instance_id'"
                 db_dml wiki_page_url_update { update qw_page_url_map
-                    set page_id = :page_id where url = :url }
+                    set page_id = :page_id where url = :url and instance_id = :instance_id }
             }
             set return_page_id $page_id
             
@@ -185,7 +185,7 @@ ad_proc -public qw_page_stats {
         set return_list_of_lists [db_list_of_lists wiki_page_stats { select name, title, comments, keywords, description, template_id, flags, trashed, popularity, last_modified, created, user_id from qw_wiki_page where id = :page_id and instance_id = :instance_id } ] 
         # convert return_lists_of_lists to return_list
         set return_list [lindex $return_list_of_lists 0]
-        # data consistency measure
+        # convert trash null/empty value to logical 0
         if { [llength $return_list] > 1 && [lindex $return_list 7] eq "" } {
             set return_list [lreplace $return_list 7 7 0]
         }
@@ -201,7 +201,8 @@ ad_proc -public qw_pages {
     {user_id ""}
     {template_id ""}
 } {
-    Returns a list of q-wiki page_ids. If template_id is included, the results are scoped to pages with same template (aka revisions). If user_id is included, the results are scoped to the user.
+    Returns a list of q-wiki page_ids. If template_id is included, the results are scoped to pages with same template (aka revisions).
+    If user_id is included, the results are scoped to the user. If nothing found, returns and empty list.
 } {
     if { $instance_id eq "" } {
         # set instance_id package_id
@@ -218,16 +219,21 @@ ad_proc -public qw_pages {
     if { $read_p } {
         if { $template_id eq "" } {
             if { $user_id ne "" } {
+                # get a list of page_ids that are mapped to a url for instance_id and where the current revision was created by user_id
                 set return_list [db_list wiki_pages_user_list { select id from qw_wiki_page where instance_id = :instance_id and user_id = :user_id and id in ( select page_id from qw_page_url_map where instance_id = :instance_id ) } ]
             } else {
-                set return_list [db_list wiki_pages_list { select id from qw_wiki_page where instance_id = :instance_id and id in ( select page_id from qw_page_url_map where instance_id = :instance_id ) } ]
+                # get a list of all page_ids mapped to a url for instance_id.
+                set return_list [db_list wiki_pages_list { select page_id from qw_page_url_map where instance_id = :instance_id } ]
             }
         } else {
-            set has_template [db_0or1row wiki_page_template "select template_id as db_template_id from qw_wiki_page where template_id= :template_id"]
+            # is the template_id valid?
+            set has_template [db_0or1row wiki_page_template { select template_id as db_template_id from qw_wiki_page where template_id= :template_id limit 1 } ]
             if { $has_template && [info exists db_template_id] && $template_id > 0 } {
                 if { $user_id ne "" } {
+                    # get a list of all page_ids of the revisions of page (template_id) that user_id created.
                     set return_list [db_list wiki_pages_t_u_list { select id from qw_wiki_page where instance_id = :instance_id and user_id = :user_id and template_id = :template_id } ]
                 } else {
+                    # get a list of all page_ids of the revisions of page (template_id) 
                     set return_list [db_list wiki_pages_list { select id from qw_wiki_page where instance_id = :instance_id and template_id = :template_id } ]
                 }
             } else {
@@ -244,9 +250,8 @@ ad_proc -public qw_page_read {
     page_id
     {instance_id ""}
     {user_id ""}
-    
 } {
-    Reads page with id. Returns page as list of attribute values: name, title, keywords, description, template_id, flags, trashed, popularity, last_modified, created, user_id, content, comments
+    Returns page contents of page_id. Returns page as list of attribute values: name, title, keywords, description, template_id, flags, trashed, popularity, last_modified, created, user_id, content, comments
 } {
     if { $instance_id eq "" } {
         # set instance_id package_id
@@ -279,7 +284,7 @@ ad_proc -public qw_page_write {
     {instance_id ""}
     {user_id ""}
 } {
-    Writes a new revision of an existing q-wiki page. page_id is the current value from qw_page_url_map.page_id (before this write).
+    Writes a new revision of an existing q-wiki page. page_id is a revision of template_id.
 } {
     if { $instance_id eq "" } {
         # set instance_id package_id
@@ -291,23 +296,24 @@ ad_proc -public qw_page_write {
     }
     set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]
     if { $write_p } {
-        set page_exists_p [db_0or1row wiki_page_get_id {select user_id as creator_id from qw_wiki_page where id = :page_id } ]
-        if { $page_id_exists_p } { 
+        set page_exists_p [db_0or1row wiki_page_get_user_id {select user_id as creator_id from qw_wiki_page where id = :page_id } ]
+        if { $page_exists_p } { 
             set page_id_stats_list [qw_page_stats $page_id $instance_id $user_id]
             set template_id [lindex $page_id_stats_list 5]
         }
 
         if { $page_exists_p } {
             set old_page_id $page_id
+            set url qw_page_url_from_id $old_page_id
             set new_page_id [db_nextval qw_page_id_seq]
             ns_log Notice "qw_page_write: wiki_page_create id '$page_id' template_id '$template_id' name '$name' instance_id '$instance_id' user_id '$user_id'"
             db_transaction {
                 db_dml wiki_page_create { insert into qw_wiki_page
                     (id,template_id,name,title,keywords,description,content,comments,instance_id,user_id, last_modified, created)
                     values (:new_page_id,:template_id,:name,:title,:keywords,:description,:content,:comments,:instance_id,:user_id, current_timestamp, current_timestamp) }
-                ns_log Notice "qw_page_create: wiki_page_id_update page_id '$new_page_id' instance_id '$instance_id' old_page_id '$old_page_id'"
+                ns_log Notice "qw_page_write: wiki_page_id_update page_id '$new_page_id' instance_id '$instance_id' old_page_id '$old_page_id'"
                 db_dml wiki_page_id_update { update qw_page_url_map
-                    set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
+                    set page_id = :new_page_id where instance_id = :instance_id and url = :url }
             } on_error {
                 set success 0
                 ns_log Error "qw_page_write: general db error during db_dml"
@@ -409,12 +415,11 @@ ad_proc -public qw_page_trash {
     set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]
     # if write_p, don't need to scope to user_id == page_user_id
 
-    # does the current, active wiki page_id need to be updated after trashing?
-    if { $trash_p } {
-        set page_id_active [db_0or1row qw_url_from_page_id { select url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id } ]
-    } else {
-        set page_id_active 0
-    }
+    # page_id can be unpublished revision or the published revision
+
+    # is page_id associated with a url ie published?
+    set page_id_active [db_0or1row qw_url_from_page_id { select url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id } ]
+
     set bulk_revision_trashing_p 0
     if { $write_p } {
         if { $page_id > 0 } {
@@ -440,19 +445,14 @@ ad_proc -public qw_page_trash {
             set bulk_revision_trashing_p $trash_p
         }
     }
-    if { $bulk_revision_trashing_p } {
-        # is active page_id still untrashed?
-        # we don't know page url or necessarily know page_id, only template_id..
-        #  feed the template_id to qw_page_url_from_id
-        set url  [qw_page_url_from_id $template_id]
+
+        # is active page_id affected?
+        #set url  \[qw_page_url_from_id $template_id\]
         set page_id_active [qw_page_id_from_url $url]
         set pia_stats  [qw_page_stats $page_id_active]
         set pia_trashed_p [lindex $pia_stats 7]
-        # if not, then set page_id_active 1 ie same as pia_trashed_p
-        set $page_id_active $pia_trashed_p
-    }
 
-    if { $page_id_active } {
+    if { $page_id_active eq $page_id } {
         # change the page_id
         set old_page_id $page_id
         set template_id [lindex [qw_page_stats $page_id $instance_id] 5]
