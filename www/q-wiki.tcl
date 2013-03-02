@@ -217,7 +217,7 @@ if { $form_posted } {
     ns_log Notice "q-wiki.tcl(169): mode $mode next_mode $next_mode"
     if { $mode eq "r" } {
         if { $write_p } {
-            if { [qw_page_id_exists $page_id $package_id] } {
+            if { $page_template_id_from_db > 0 } {
                 set validated_p 1
                 ns_log Notice "q-wiki.tcl validated for r"
             } elseif { $read_p } {
@@ -611,79 +611,89 @@ switch -exact -- $mode {
             
             # show page revisions
             # sort by template_id, columns
-            # get template_id from page_id
-            set page_id_stats_list [qw_page_stats $page_id $instance_id $user_id]
-            set template_id [lindex $page_id_stats_list 5]
-
-
-
+            set template_id $page_template_id_from_db
+            # these should be sorted by last_modified
             set page_ids_list [qw_pages $package_id $user_id $template_id]
-            set page_stats_lists [list ]
-            set page_trashed_lists [list ]
-            set cell_formating_list [list ]
+
             set pages_stats_lists [list ]
-            # we get the entire list, to sort it before processing
+            # we get the entire data set, 1 row(list) per revision as table pages_stats_lists
+            # url is same for each
+            set page_url [qw_page_url_from_id $page_id]
             foreach page_id $page_ids_list {
-                
                 set stats_mod_list [list $page_id]
                 set stats_orig_list [qw_page_stats $page_id]
+                #   a list: name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id
                 foreach stat $stats_orig_list {
                     lappend stats_mod_list $stat
                 }
-                # qw_stats:  name, title, keywords,description, template_id, flags, trashed, popularity, time last_modified, time created, user_id.
-                # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id 
+                lappend stats_mod_list $page_url
+                # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url
                 lappend pages_stats_lists $stats_mod_list
             }
-            set pages_stats_lists [lsort -index 6 -real $pages_stats_lists]
-            set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
-            foreach stats_orig_list $pages_stats_lists {
-                set stats_list [lrange $stats_orig_list 0 4]
-                set page_id [lindex $stats_list 0]
-                set name [lindex $stats_list 1]
-                set template_id [lindex $stats_orig_list 6]
-                set page_user_id [lindex $stats_orig_list 12]
-                set trashed_p [lindex $stats_orig_list 8]
-                
-                # convert table row for use with html
-                # change name to an active link
-                set active_link "<a\ href=\"q-wiki?$p=${page_id}\">$name</a>"
-                
-                if { ( $admin_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
+            # build tables (list_of_lists) stats_list and their html filtered versions page_*_lists for display
+            set page_stats_lists [list ]
+
+            ### stats_list should contain page_id, user_id, size (string_length) ,last_modified, comments,flags, live_revision_p, trash / untrash - delete
+            foreach stats_mod_list $pages_stats_lists {
+                set stats_list [lrange $stats_mod_list 0 2]
+                lappend stats_list [lindex $stats_mod_list 5]
+                lappend stats_list [lindex $stats_mod_list 3]
+
+                set page_id [lindex $stats_mod_list 0]
+                set name [lindex $stats_mod_list 1]
+                set template_id [lindex $stats_mod_list 6]
+                set page_user_id [lindex $stats_mod_list 12]
+                set trashed_p [lindex $stats_mod_list 8]
+                set page_url [lindex $stats_mod_list 13]
+
+                # convert stats_list for use with html
+
+                # change Name to an active link and add actions if available
+                set active_link "<a href=\"${page_url}\">$name</a>"
+                set active_link_list [list $active_link]
+                set active_link2 ""
+                if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
                     set trash_label "untrash"
-                    append active_link " \[<a href=\"q-wiki?p=${page_id}&mode=t\">${trash_label}</a>\]"
-                } elseif { $page_user_id == $user_id || $admin_p } {
+                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
+                } elseif { $page_user_id == $user_id || $write_p } {
                     set trash_label "trash"
-                    append active_link " \[<a href=\"q-wiki?$p=${page_id}&mode=t\">${trash_label}</a>\]"
+                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
                 } 
-                if { $delete_p } {
-                    append active_link " \[<a href=\"q-wiki?p=${page_id}&mode=d\">delete</a>\]"
+                if { $delete_p && $trashed_p } {
+                    append active_link2 " \[<a href=\"${page_url}?template_id=${template_id}&mode=d&next_mode=l\">delete</a>\]"
                 } 
-                set stats_list [lreplace $stats_list 0 1 $active_link]
-                if { $trashed_p == 1 } {
+                set stats_list [lreplace $stats_list 0 0 $active_link]
+                set stats_list [lreplace $stats_list 1 1 $active_link2]
+
+                # add stats_list to one of the tables for display
+                if { $trashed_p && ( $write_p || $page_user_id eq $user_id ) } {
                     lappend page_trashed_lists $stats_list
+                } elseif { $trashed_p } {
+                    # ignore this row, but track for errors
                 } else {
                     lappend page_stats_lists $stats_list
                 }
-                
             }
-            # sort for now. Later, just get page_tables with same template_id
+
+            # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name Title Comments] ]
-            set page_tag_atts_list [list border 1 cellspacing 0 cellpadding 3]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
+            set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
+            set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
-            # trashed
-            if { [llength $page_trashed_lists] > 0 && $write_p } {
+            # trashed table
+            if { [llength $page_trashed_lists] > 0 } {
                 set page_trashed_sorted_lists $page_trashed_lists
-                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name Title Comments] ]
-                set page_tag_atts_list [list border 1 cellspacing 0 cellpadding 3]
+                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
+                set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
                 
                 set page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
-#                append page_stats_html $page_trashed_html
             }
         } else {
-            # no permission to write or edit page. This should not happen.
-            ns_log Warning "q-wiki.tcl:(543) user did not get expected error when not able to write page."
+            # does not have permission to read. This should not happen.
+            ns_log Warning "q-wiki.tcl:(465) user did not get expected 404 error when not able to read page."
         }
+
     }
     e {
         if { $write_p } {
