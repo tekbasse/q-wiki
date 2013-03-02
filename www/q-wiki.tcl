@@ -563,18 +563,20 @@ switch -exact -- $mode {
 
                 # change Name to an active link and add actions if available
                 set active_link "<a href=\"${page_url}\">$name</a>"
-                
+                set active_link_list [list $active_link]
+                set active_link2 ""
                 if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
                     set trash_label "untrash"
-                    append active_link " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
+                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
                 } elseif { $page_user_id == $user_id || $write_p } {
                     set trash_label "trash"
-                    append active_link " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
+                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
                 } 
-                if { $delete_p } {
-                    append active_link " \[<a href=\"${page_url}?mode=d&next_mode=l\">delete</a>\]"
+                if { $delete_p && $trashed_p } {
+                    append active_link2 " \[<a href=\"${page_url}?mode=d&next_mode=l\">delete</a>\]"
                 } 
-                set stats_list [lreplace $stats_list 0 1 $active_link]
+                set stats_list [lreplace $stats_list 0 0 $active_link]
+                set stats_list [lreplace $stats_list 1 1 $active_link2]
 
                 # add stats_list to one of the tables for display
                 if { $trashed_p && ( $write_p || $page_user_id eq $user_id ) } {
@@ -588,14 +590,14 @@ switch -exact -- $mode {
 
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name Title Description Comments] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
             set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
             # trashed table
             if { [llength $page_trashed_lists] > 0 } {
                 set page_trashed_sorted_lists $page_trashed_lists
-                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name Title Description Comments] ]
+                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
                 set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
                 
                 set page_trashed_html "<h3>Trashed tables</h3>\n"

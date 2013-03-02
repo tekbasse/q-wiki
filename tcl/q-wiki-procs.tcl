@@ -477,7 +477,7 @@ ad_proc -public qw_page_trash {
     if { $page_id_active_p } {
         # published page_id is affected, set mapped page trash also.
         db_dml wiki_page_id_update { update qw_page_url_map
-            set trashed = :trashed_p where page_id = :page_id and instance_id = :instance_id }
+            set trashed = :trash_p where page_id = :page_id and instance_id = :instance_id }
     }
     return 1
 }
