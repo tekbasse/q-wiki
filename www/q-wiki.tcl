@@ -152,16 +152,12 @@ if { $form_posted } {
 
         # page_template_id and page_id gets checked against db for added security
         # check for form/db descrepencies
-        if { $page_id ne "" && $page_id ne $page_id_from_url } {
+        set pid_form_stats_list [qw_page_stats $page_id]
+        set pid_form_template_id [lindex $pid_stats_list 5]
+        if { $page_id ne "" && $page_template_id_from_db ne $pid_form_template_id } {
             set  mode ""
             set next_mode ""
-            ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' ne page_id_from_url '$page_id_from_url' "
-            lappend user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
-        }
-        if { $page_template_id ne "" && $page_template_id ne $page_template_id_from_db } {
-            set mode ""
-            set next_mode ""
-            ns_log Notice "q-wiki/q-wiki.tcl page_template_id '${page_template_id}' ne page_template_id_from_db '${page_template_id_from_db}'"
+            ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' page_id_from_url '$page_id_from_url' page_template_id_from_db $page_template_id_from_db pid_form_template_id $pid_form_template_id"
             lappend user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
         
@@ -345,7 +341,7 @@ if { $form_posted } {
             #  delete.... removes context     
             ns_log Notice "q-wiki.tcl mode = delete"
             if { $delete_p } {
-                qw_page_delete $page_id
+                qw_page_delete $page_id $template_id $package_id $user_id
             }
             set mode $next_mode
             set next_mode ""
@@ -520,7 +516,7 @@ set menu_list [list ]
 ns_log Notice "q-wiki.tcl(508): OUTPUT mode $mode"
 switch -exact -- $mode {
     l {
-        #  list...... presents a list of pages
+        #  list...... presents a list of pages  (Branch this off as a procedure and/or lib page fragment to be called by view action)
         if { $read_p } {
             ns_log Notice "q-wiki.tcl(427): mode = $mode ie. list of pages, index"
             append title " index" 
@@ -573,7 +569,7 @@ switch -exact -- $mode {
                     set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
                 } 
                 if { $delete_p && $trashed_p } {
-                    append active_link2 " \[<a href=\"${page_url}?mode=d&next_mode=l\">delete</a>\]"
+                    append active_link2 " \[<a href=\"${page_url}?template_id=${template_id}&mode=d&next_mode=l\">delete</a>\]"
                 } 
                 set stats_list [lreplace $stats_list 0 0 $active_link]
                 set stats_list [lreplace $stats_list 1 1 $active_link2]
@@ -600,9 +596,7 @@ switch -exact -- $mode {
                 set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
                 set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
                 
-                set page_trashed_html "<h3>Trashed tables</h3>\n"
-                append page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
-#                append page_stats_html $page_trashed_html
+                set page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
             }
         } else {
             # does not have permission to read. This should not happen.
@@ -615,10 +609,13 @@ switch -exact -- $mode {
             ns_log Notice "q-wiki.tcl mode = $mode ie. revisions"
             append title " page revisions"
             
-            # show page
+            # show page revisions
             # sort by template_id, columns
-            # get template_id from page_id, to confirm that this is a template_id and not a page_id (revision)
- ### see tcl/q-wiki-procs.tcl qw_create_page for solution
+            # get template_id from page_id
+            set page_id_stats_list [qw_page_stats $page_id $instance_id $user_id]
+            set template_id [lindex $page_id_stats_list 5]
+
+
 
             set page_ids_list [qw_pages $package_id $user_id $template_id]
             set page_stats_lists [list ]
@@ -680,9 +677,8 @@ switch -exact -- $mode {
                 set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name Title Comments] ]
                 set page_tag_atts_list [list border 1 cellspacing 0 cellpadding 3]
                 
-                set page_trashed_html "<h3>Trashed tables</h3>\n"
-                append page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
-                append page_stats_html $page_trashed_html
+                set page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
+#                append page_stats_html $page_trashed_html
             }
         } else {
             # no permission to write or edit page. This should not happen.

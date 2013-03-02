@@ -74,6 +74,22 @@ ad_proc -public qw_page_url_from_id {
     return $page_url
 }
 
+ad_proc -public qw_page_url_id_from_template_id { 
+    template_id
+    {instance_id ""}
+} {
+    Returns page_id mapped to the url mapped to template_id, else returns empty string.
+} {
+    if { $instance_id eq "" } {
+        # set instance_id package_id
+        set instance_id [ad_conn package_id]
+    }
+    set page_id ""
+    db_0or1row wiki_page_get_url_from_template_id { select page_id from qw_page_url_map where instance_id = :instance_id and page_id in ( select id as page_id from qw_wiki_page where instance_id = :instance_id and template_id = :template_id ) }
+    return $page_id
+}
+
+
 ad_proc -public qw_page_from_url { 
     page_url
     {instance_id ""}
@@ -336,7 +352,7 @@ ad_proc -public qw_page_delete {
     {instance_id ""}
     {user_id ""}
 } {
-    page_id can be a list of page_id's. Deletes page_id (subject to permission check) and item(s) already trashed.
+    Deletes all revisions of template_id if not null, or if page_id not null, deletes page_id.
     Returns 1 if deleted. Returns 0 if there were any issues.
 } {
     if { $instance_id eq "" } {
@@ -350,27 +366,30 @@ ad_proc -public qw_page_delete {
     set delete_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege delete]
     set success $delete_p
     if { $delete_p && $page_id > 0 } {
+        # to delete a revision
         db_transaction {
             db_dml wiki_page_delete { delete from qw_wiki_page 
                 where id=:page_id and instance_id =:instance_id and user_id=:user_id }
             set page_id_active [db_0or1row qw_url_from_page_id { select url from qw_page_url_map where page_id = :page_id and instance_id = :instance_id } ]
             if { $page_id_active } {
-                # change the page_id
+                # change the page_id mapped to the url
                 set template_id [lindex [qw_page_stats $page_id $instance_id] 5]
-                db_0or1row qw_previous_page_id { select page_id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id and not ( trashed = '1') order by created limit 1 }
+                db_0or1row qw_previous_page_id { select id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id and not ( trashed = '1') order by created limit 1 }
                 if { [info exists new_page_id] } {
                     #  point to the most recent untrashed revision
                     db_dml wiki_page_id_update { update qw_page_url_map
                         set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
                 } else {
-                    # point to the most recent trashed version, then trash the entire page
-                    db_0or1row qw_previous_page_id { select page_id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id order by created limit 1 }
+                    # point to the most recent trashed version, and trash the mapped url status for consistency
+                    db_0or1row qw_previous_page_id { select id as new_page_id, created from qw_wiki_page where template_id = :template_id and instance_id = :instance_id order by created limit 1 }
                     if { [info exists new_page_id] } {
-                        db_dml wiki_page_id_update { update qw_page_url_map
-                            set page_id = :new_page_id where instance_id = :instance_id and page_id = :old_page_id }
-                    } 
-                    db_dml wiki_page_id_update { update qw_page_url_map
-                        set trashed = '1' where page_id = :page_id and instance_id = :instance_id }
+                        db_dml wiki_page_id_update_trashed { update qw_page_url_map
+                            set page_id = :new_page_id and trashed = '1' where instance_id = :instance_id and page_id = :old_page_id }
+                    } else {
+                        # the revision being deleted is the last revision, delete the mapped url entry
+                        db_dml wiki_page_delete { delete from qw_page_url_map
+                            where page_id =:page_id and instance_id =:instance_id}
+                    }
                 }
             }
             set success 1
@@ -379,10 +398,16 @@ ad_proc -public qw_page_delete {
             ns_log Error "qw_page_delete: general db error during db_dml wiki_page_delete"
         }
     } elseif { $delete_p && $template_id > 0 } {
-
+        # delete all revisions of template_id and the url_mapped to it (first).
         db_transaction {
+            # get active page_id for reference
+            set page_id [qw_page_url_id_from_template_id $template_id $instance_id]
+            # delete mapped url entry
+            db_dml wiki_page_delete { delete from qw_page_url_map
+                where page_id =:page_id and instance_id =:instance_id}
+            # delete all revisions
             db_dml wiki_template_delete { delete from qw_wiki_page 
-                where template_id=:template_id and instance_id =:instance_id and user_id=:user_id }
+                where template_id=:template_id and instance_id =:instance_id }
             set success 1
         } on_error {
             set success 0
@@ -392,6 +417,8 @@ ad_proc -public qw_page_delete {
         
     return $success
 }
+
+
 
 ad_proc -public qw_page_trash {
     {page_id ""}
