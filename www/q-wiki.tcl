@@ -153,7 +153,7 @@ if { $form_posted } {
         # page_template_id and page_id gets checked against db for added security
         # check for form/db descrepencies
         set pid_form_stats_list [qw_page_stats $page_id]
-        set pid_form_template_id [lindex $pid_stats_list 5]
+        set pid_form_template_id [lindex $pid_form_stats_list 5]
         if { $page_id ne "" && $page_template_id_from_db ne $pid_form_template_id } {
             set  mode ""
             set next_mode ""
@@ -341,7 +341,7 @@ if { $form_posted } {
             #  delete.... removes context     
             ns_log Notice "q-wiki.tcl mode = delete"
             if { $delete_p } {
-                qw_page_delete $page_id $template_id $package_id $user_id
+                qw_page_delete $page_id $page_template_id_from_db $package_id $user_id
             }
             set mode $next_mode
             set next_mode ""
