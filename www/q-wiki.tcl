@@ -619,15 +619,19 @@ switch -exact -- $mode {
             # we get the entire data set, 1 row(list) per revision as table pages_stats_lists
             # url is same for each
             set page_url [qw_page_url_from_id $page_id]
+            set page_id_active [qw_page_id_from_url $page_url $package_id]
             foreach page_id $page_ids_list {
                 set stats_mod_list [list $page_id]
                 set stats_orig_list [qw_page_stats $page_id]
+                set page_list [qw_page_read $page_id]
                 #   a list: name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id
                 foreach stat $stats_orig_list {
                     lappend stats_mod_list $stat
                 }
                 lappend stats_mod_list $page_url
-                # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url
+                lappend stats_mod_list [string length [lindex $page_list 11]]
+                lappend stats_mod_list [expr $page_id == $page_id_active]
+                # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url, content_length, active_revision
                 lappend pages_stats_lists $stats_mod_list
             }
             # build tables (list_of_lists) stats_list and their html filtered versions page_*_lists for display
@@ -635,17 +639,13 @@ switch -exact -- $mode {
 
             ### stats_list should contain page_id, user_id, size (string_length) ,last_modified, comments,flags, live_revision_p, trash / untrash - delete
             foreach stats_mod_list $pages_stats_lists {
-                set stats_list [lrange $stats_mod_list 0 2]
-                lappend stats_list [lindex $stats_mod_list 5]
-                lappend stats_list [lindex $stats_mod_list 3]
-
-                set page_id [lindex $stats_mod_list 0]
-                set name [lindex $stats_mod_list 1]
-                set template_id [lindex $stats_mod_list 6]
-                set page_user_id [lindex $stats_mod_list 12]
-                set trashed_p [lindex $stats_mod_list 8]
-                set page_url [lindex $stats_mod_list 13]
-
+                set stats_list [list]
+                set index_list [list page_id 0 page_user_id 12 size 14 last_modified 10 comments 3 flags 7 live_revision_p 15 trashed_p 8]
+                foreach {list_item_name list_item_index} $index_list {
+                    set list_item_value [lindex $stats_mod_list $list_item_index]
+                    set $list_item_name $list_item_value
+                    lappend stats_list $list_item_value
+                }
                 # convert stats_list for use with html
 
                 # change Name to an active link and add actions if available
