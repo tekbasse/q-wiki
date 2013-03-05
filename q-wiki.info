@@ -20,6 +20,7 @@
         <provides url="q-wiki" version="5.85b"/>
 
         <requires url="q-forms" version="0.1d"/>
+        <requires url="ajaxhelper" version="0.87d"/>
         <callbacks>
         </callbacks>
         <parameters>

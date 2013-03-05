@@ -642,6 +642,14 @@ switch -exact -- $mode {
             set page_stats_lists [list ]
 
             # stats_list should contain page_id, user_id, size (string_length) ,last_modified, comments,flags, live_revision_p, trashed? , actions: untrash delete
+            set icons_path1 "/resources/acs-subsite/"
+            set icons_path2 "/resources/ajaxhelper/icons/"
+            set delete_icon_url [file join $icons_path2 delete.png]
+            set trash_icon_url [file join $icons_path2 page_delete.png]
+            set untrash_icon_url [file join $icons_path2 page_add.png]
+            set radio_checked_url [file join $icons_path1 radiochecked.gif]
+            set radio_unchecked_url [file join $icons_path1 radio.gif]
+
             foreach stats_mod_list $pages_stats_lists {
                 set stats_list [list]
                 set index_list [list page_id 0 page_user_id 12 size 14 last_modified 10 comments 3 flags 7 live_revision_p 15 trashed_p 8]
@@ -651,25 +659,26 @@ switch -exact -- $mode {
                     lappend stats_list $list_item_value
                 }
                 # convert stats_list for use with html
+
                 set active_link "<a href=\"${url}\">${page_id}</a>"
                 set stats_list [lreplace $stats_list 0 0 $active_link]
 
                 if { $live_revision_p } {
-                    set stats_list [lreplace $stats_list 6 6 "<img src=\"/resources/acs-subsite/radiochecked.gif\" alt=\"active\" width=\"13\" height=\"13\">"]
+                    set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_checked_url}\" alt=\"active\" title=\"active\" width=\"13\" height=\"13\">"]
                 } else {
-                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a\"><img src=\"/resources/acs-subsite/radio.gif\" alt=\"inactive\" width=\"13\" height=\"13\"></a>"]
+                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
                 }
                 set active_link_list [list $active_link]
                 set active_link2 ""
                 if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
-                    set active_link2 " \[<a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\">untrash</a>\]"
+                    set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
                 } elseif { $page_user_id == $user_id || $write_p } {
-                    set active_link2 " \[<a href=\"${url}?${page_id}mode=t&next_mode=r\"><img src=\"/resources/acs-subsite/Delete16.gif\" alt=\"trash\" width=\"16\" height=\"16\"></a>\]"
+                    set active_link2 " <a href=\"${url}?${page_id}mode=t&next_mode=r\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
                 } 
                 if { ( $delete_p || $page_user_id == $user_id ) && $trashed_p } {
-                    append active_link2 " &nbsp; &nbsp; \[<a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\">x</a>\] &nbsp; "
+                    append active_link2 " &nbsp; &nbsp; <a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
                 } 
-                lappend stats_list $active_link2
+                set stats_list [lreplace $stats_list 7 7 $active_link2]
 
 
 
@@ -681,7 +690,7 @@ switch -exact -- $mode {
 
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "by User" Size "Last Modified" "Comments" "Flags" "Live?" "Trashed?" "Actions"] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "by User" Size "Last Modified" "Comments" "Flags" "Live?" "Trash status"] ]
             set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
