@@ -660,13 +660,15 @@ switch -exact -- $mode {
                 }
                 # convert stats_list for use with html
 
-                set active_link "<a href=\"${url}\">${page_id}</a>"
+                set active_link "<a href=\"${url}?page_id=$page_id&mode=e\">${page_id}</a>"
                 set stats_list [lreplace $stats_list 0 0 $active_link]
 
                 if { $live_revision_p } {
                     set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_checked_url}\" alt=\"active\" title=\"active\" width=\"13\" height=\"13\">"]
-                } else {
+                } elseif { !$live_revision_p && !$trashed_p } {
                     set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
+                } else {
+                    set stats_list [lreplace $stats_list 6 6 "&nbsp;"]   
                 }
                 set active_link_list [list $active_link]
                 set active_link2 ""
