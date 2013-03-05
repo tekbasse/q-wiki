@@ -6,6 +6,10 @@
 # this page split into MVC components:
 #  inputs/observations (controller), actions (model), and outputs/reports (view) sections
 
+## For consistency, user_id can only make modifications if they have create_p permissions. 
+## User_id is not enough, as there would be issues with choosing active revisions
+## so, user_id revsion changes are moderated. ie user_id can create a revision, but it takes write_p user to make revision active.
+
 
 # INPUTS / CONTROLLER
 
@@ -115,6 +119,7 @@ ns_log Notice "q-wiki.tcl(63): mode $mode next_mode $next_mode"
     # d = delete template_id or page_id
     # t = trash template_id or page_id
     # w = write page_id,template_id, make new page_id for template_id
+    # a = make page_id the active revision for template_id
 # Views
     # e = edit page_url, presents defaults (new) if page doesn't exist
     # v = view page_url
@@ -618,8 +623,7 @@ switch -exact -- $mode {
             set pages_stats_lists [list ]
             # we get the entire data set, 1 row(list) per revision as table pages_stats_lists
             # url is same for each
-            set page_url [qw_page_url_from_id $page_id]
-            set page_id_active [qw_page_id_from_url $page_url $package_id]
+            set page_id_active $page_id_from_url
             foreach page_id $page_ids_list {
                 set stats_mod_list [list $page_id]
                 set stats_orig_list [qw_page_stats $page_id]
@@ -628,16 +632,16 @@ switch -exact -- $mode {
                 foreach stat $stats_orig_list {
                     lappend stats_mod_list $stat
                 }
-                lappend stats_mod_list $page_url
+                lappend stats_mod_list $url
                 lappend stats_mod_list [string length [lindex $page_list 11]]
-                lappend stats_mod_list [expr $page_id == $page_id_active]
+                lappend stats_mod_list [expr {$page_id == $page_id_active} ]
                 # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url, content_length, active_revision
                 lappend pages_stats_lists $stats_mod_list
             }
             # build tables (list_of_lists) stats_list and their html filtered versions page_*_lists for display
             set page_stats_lists [list ]
 
-            ### stats_list should contain page_id, user_id, size (string_length) ,last_modified, comments,flags, live_revision_p, trash / untrash - delete
+            # stats_list should contain page_id, user_id, size (string_length) ,last_modified, comments,flags, live_revision_p, trashed? , actions: untrash delete
             foreach stats_mod_list $pages_stats_lists {
                 set stats_list [list]
                 set index_list [list page_id 0 page_user_id 12 size 14 last_modified 10 comments 3 flags 7 live_revision_p 15 trashed_p 8]
@@ -647,48 +651,40 @@ switch -exact -- $mode {
                     lappend stats_list $list_item_value
                 }
                 # convert stats_list for use with html
+                set active_link "<a href=\"${url}\">${page_id}</a>"
+                set stats_list [lreplace $stats_list 0 0 $active_link]
 
-                # change Name to an active link and add actions if available
-                set active_link "<a href=\"${page_url}\">$name</a>"
+                if { $live_revision_p } {
+                    set stats_list [lreplace $stats_list 6 6 "<img src=\"/resources/acs-subsite/radiochecked.gif\" alt=\"active\" width=\"13\" height=\"13\">"]
+                } else {
+                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a\"><img src=\"/resources/acs-subsite/radio.gif\" alt=\"inactive\" width=\"13\" height=\"13\"></a>"]
+                }
                 set active_link_list [list $active_link]
                 set active_link2 ""
                 if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
-                    set trash_label "untrash"
-                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
+                    set active_link2 " \[<a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\">untrash</a>\]"
                 } elseif { $page_user_id == $user_id || $write_p } {
-                    set trash_label "trash"
-                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
+                    set active_link2 " \[<a href=\"${url}?${page_id}mode=t&next_mode=r\"><img src=\"/resources/acs-subsite/Delete16.gif\" alt=\"trash\" width=\"16\" height=\"16\"></a>\]"
                 } 
-                if { $delete_p && $trashed_p } {
-                    append active_link2 " \[<a href=\"${page_url}?template_id=${template_id}&mode=d&next_mode=l\">delete</a>\]"
+                if { ( $delete_p || $page_user_id == $user_id ) && $trashed_p } {
+                    append active_link2 " &nbsp; &nbsp; \[<a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\">x</a>\] &nbsp; "
                 } 
-                set stats_list [lreplace $stats_list 0 0 $active_link]
-                set stats_list [lreplace $stats_list 1 1 $active_link2]
+                lappend stats_list $active_link2
 
-                # add stats_list to one of the tables for display
-                if { $trashed_p && ( $write_p || $page_user_id eq $user_id ) } {
-                    lappend page_trashed_lists $stats_list
-                } elseif { $trashed_p } {
-                    # ignore this row, but track for errors
-                } else {
+
+
+                # if the user can delete or trash this stats_list, display it.
+                if { $write_p || $page_user_id eq $user_id } {
                     lappend page_stats_lists $stats_list
-                }
+                } 
             }
 
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "by User" Size "Last Modified" "Comments" "Flags" "Live?" "Trashed?" "Actions"] ]
             set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
-            # trashed table
-            if { [llength $page_trashed_lists] > 0 } {
-                set page_trashed_sorted_lists $page_trashed_lists
-                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
-                set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
-                
-                set page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
-            }
         } else {
             # does not have permission to read. This should not happen.
             ns_log Warning "q-wiki.tcl:(465) user did not get expected 404 error when not able to read page."
