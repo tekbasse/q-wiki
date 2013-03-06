@@ -141,7 +141,7 @@ if { $form_posted } {
     }
     if { ![qf_is_natural_number $page_id] } {
         set page_id ""
-    }
+    } 
 
     set validated_p 0
     # validate input
@@ -151,6 +151,8 @@ if { $form_posted } {
     
     if { $page_id_from_url ne "" } {
         # page exists
+       
+
         set page_stats_list [qw_page_stats $page_id_from_url $package_id $user_id]
         set page_template_id_from_db [lindex $page_stats_list 5]
         ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db '$page_template_id_from_db'"
@@ -159,10 +161,12 @@ if { $form_posted } {
         # check for form/db descrepencies
         set pid_form_stats_list [qw_page_stats $page_id]
         set pid_form_template_id [lindex $pid_form_stats_list 5]
+        # if mode is e etc, allow edit of page_id in set of page_id_from_url revisions:
         if { $page_id ne "" && $page_template_id_from_db ne $pid_form_template_id } {
+            ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' page_id_from_url '$page_id_from_url' page_template_id_from_db $page_template_id_from_db pid_form_template_id $pid_form_template_id"
+            set page_id $page_id_from_url
             set  mode ""
             set next_mode ""
-            ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' page_id_from_url '$page_id_from_url' page_template_id_from_db $page_template_id_from_db pid_form_template_id $pid_form_template_id"
             lappend user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
         }
         
@@ -366,9 +370,9 @@ if { $form_posted } {
             set trash_done_p 0
             if { $write_p || $page_user_id eq $user_id } {
                 if { $trashed_p == 1 } {
-                    set trash 0
+                    set trash "0"
                 } else {
-                    set trash 1
+                    set trash "1"
                 }
                 set trash_done_p [qw_page_trash $page_id $trash]
                 set mode $next_mode
