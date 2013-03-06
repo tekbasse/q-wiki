@@ -383,7 +383,7 @@ if { $form_posted } {
 #            set template_id \[lindex $page_id_stats 5\]
             set trash_done_p 0
             if { $write_p || $page_user_id eq $user_id } {
-                if { $trashed_p == 1 } {
+                if { $trashed_p } {
                     set trash "0"
                 } else {
                     set trash "1"
@@ -393,7 +393,6 @@ if { $form_posted } {
             } 
             if { !$trash_done_p } {
                 lappend user_message_list "Item could not be trashed. You don't have permission to trash this item."
-                set mode "v"
             }
             set next_mode ""
             # update the page_id
@@ -690,10 +689,10 @@ switch -exact -- $mode {
                 }
                 set active_link_list [list $active_link]
                 set active_link2 ""
-                if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
+                if { ( $write_p || $page_user_id == $user_id ) && $trashed_p } {
                     set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
                 } elseif { $page_user_id == $user_id || $write_p } {
-                    set active_link2 " <a href=\"${url}?${page_id}mode=t&next_mode=r\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
+                    set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
                 } 
                 if { ( $delete_p || $page_user_id == $user_id ) && $trashed_p } {
                     append active_link2 " &nbsp; &nbsp; <a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
