@@ -361,6 +361,7 @@ if { $form_posted } {
             if { $write_p } {
                 if { [qw_change_page_id_for_url $page_id $url $package_id] } {
                     set mode $next_mode
+                    set page_id_from_url $page_id
                 } else {
                     lappend user_message_list "Revision could not be made active. Try again or report issue to [ad_admin_owner]"
                     set mode "r"

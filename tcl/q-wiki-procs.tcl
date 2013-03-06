@@ -21,7 +21,7 @@ ad_proc -public qw_page_id_exists {
 }
 
 ad_proc -public qw_change_page_id_for_url {
-    page_id
+    page_id_new
     page_url
     {instance_id ""}
 } {
@@ -36,14 +36,16 @@ ad_proc -public qw_change_page_id_for_url {
     set success_p 0
     if { $write_p } {
         # new page
-        set page_stats_list [qw_page_stats $page_id $instance_id]
-        set template_id [lindex $page_stats_list 5]
-        set trashed_p [lindex $page_stats_list 7]
-        set page_url_new [qw_page_url_id_from_template_id $template_id $instance_id]
+        set page_new_stats_list [qw_page_stats $page_id_new $instance_id]
+        set template_id_new [lindex $page_new_stats_list 5]
+        set trashed_p_new [lindex $page_new_stats_list 7]
+        set page_url_new [qw_page_url_from_id $page_id_new $instance_id]
         # new and current page
-        if { $page_url_new ne "" && $page_url eq $page_url_new && !$trashed_p } {
+        if { $page_url_new ne "" && $page_url eq $page_url_new && !$trashed_p_new } {
             db_dml wiki_change_revision { update qw_page_url_map
-            set page_id = :page_id where url = :url and instance_id = :instance_id }
+            set page_id = :page_id_new where url = :page_url and instance_id = :instance_id }
+            db_dml wiki_change_revision_active { update qw_wiki_page
+                set last_modified = current_timestamp where id = :page_id_new and instance_id = :instance_id }
             set success_p 1
         }
     }
@@ -266,10 +268,10 @@ ad_proc -public qw_pages {
         if { $template_id eq "" } {
             if { $user_id ne "" } {
                 # get a list of page_ids that are mapped to a url for instance_id and where the current revision was created by user_id
-                set return_list [db_list wiki_pages_user_list { select id from qw_wiki_page where instance_id = :instance_id and user_id = :user_id and id in ( select page_id from qw_page_url_map where instance_id = :instance_id ) order by last_modified } ]
+                set return_list [db_list wiki_pages_user_list { select id from qw_wiki_page where instance_id = :instance_id and user_id = :user_id and id in ( select page_id from qw_page_url_map where instance_id = :instance_id ) order by last_modified desc } ]
             } else {
                 # get a list of all page_ids mapped to a url for instance_id.
-                set return_list [db_list wiki_pages_list { select page_id from qw_page_url_map where instance_id = :instance_id } ]
+                set return_list [db_list wiki_pages_list { select page_id from qw_page_url_map where instance_id = :instance_id order by last_modified desc } ]
             }
         } else {
             # is the template_id valid?
@@ -277,7 +279,7 @@ ad_proc -public qw_pages {
             if { $has_template && [info exists db_template_id] && $template_id > 0 } {
                 if { $user_id ne "" } {
                     # get a list of all page_ids of the revisions of page (template_id) that user_id created.
-                    set return_list [db_list wiki_pages_t_u_list { select id from qw_wiki_page where instance_id = :instance_id and user_id = :user_id and template_id = :template_id order by last_modified } ]
+                    set return_list [db_list wiki_pages_t_u_list { select id from qw_wiki_page where instance_id = :instance_id and user_id = :user_id and template_id = :template_id order by last_modified desc } ]
                 } else {
                     # get a list of all page_ids of the revisions of page (template_id) 
                     set return_list [db_list wiki_pages_list { select id from qw_wiki_page where instance_id = :instance_id and template_id = :template_id order by last_modified } ]
