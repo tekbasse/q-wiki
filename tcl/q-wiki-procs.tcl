@@ -20,6 +20,36 @@ ad_proc -public qw_page_id_exists {
     return $page_exists_p
 }
 
+ad_proc -public qw_change_page_id_for_url {
+    page_id
+    page_url
+    {instance_id ""}
+} {
+    Changes the active revision (page_id) for page_url. Returns 1 if successful, otherwise 0.
+} {
+    if { $instance_id eq "" } {
+        # set instance_id package_id
+        set instance_id [ad_conn package_id]
+    }
+    set user_id [ad_conn user_id]
+    set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write] 
+    set success_p 0
+    if { $write_p } {
+        # new page
+        set page_stats_list [qw_page_stats $page_id $instance_id]
+        set template_id [lindex $page_stats_list 5]
+        set trashed_p [lindex $page_stats_list 7]
+        set page_url_new [qw_page_url_id_from_template_id $template_id $instance_id]
+        # new and current page
+        if { $page_url_new ne "" && $page_url eq $page_url_new && !$trashed_p } {
+            db_dml wiki_change_revision { update qw_page_url_map
+            set page_id = :page_id where url = :url and instance_id = :instance_id }
+            set success_p 1
+        }
+    }
+    return $success_p
+}
+
 ad_proc -public qw_page_id_from_url { 
     page_url
     {instance_id ""}

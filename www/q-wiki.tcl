@@ -167,7 +167,7 @@ if { $form_posted } {
             set page_id $page_id_from_url
             set  mode ""
             set next_mode ""
-            lappend user_message_list "There has been an internal processing error. Try again or report to [ad_admin_owner]"
+            lappend user_message_list "There has been an internal processing error. Try again or report issue to [ad_admin_owner]"
         }
         
         # A blank referrer means a direct request
@@ -224,11 +224,11 @@ if { $form_posted } {
         }
     }
     ns_log Notice "q-wiki.tcl(169): mode $mode next_mode $next_mode"
-    if { $mode eq "r" } {
+    if { $mode eq "r" || $mode eq "a" } {
         if { $write_p } {
             if { $page_template_id_from_db > 0 } {
                 set validated_p 1
-                ns_log Notice "q-wiki.tcl validated for r"
+                ns_log Notice "q-wiki.tcl validated for $mode"
             } elseif { $read_p } {
                 # This is a 404 return, but we list pages for more convenient UI
                 lappend user_message_list "Page not found. Showing a list of choices."
@@ -236,8 +236,8 @@ if { $form_posted } {
             }
         } else {
             set mode ""
+            set next_mode ""
         }
-        set next_mode ""
     }
     ns_log Notice "q-wiki.tcl(185): mode $mode next_mode $next_mode"
     if { $mode eq "t" } {
@@ -353,6 +353,19 @@ if { $form_posted } {
                 qw_page_delete $page_id $page_template_id_from_db $package_id $user_id
             }
             set mode $next_mode
+            set next_mode ""
+        }
+        ns_log Notice "q-wiki.tcl(358): mode $mode"
+        if { $mode eq "a" } {
+            # change active revision of page_template_id_from_db to page_id
+            if { $write_p } {
+                if { [qw_change_page_id_for_url $page_id $url $package_id] } {
+                    set mode $next_mode
+                } else {
+                    lappend user_message_list "Revision could not be made active. Try again or report issue to [ad_admin_owner]"
+                    set mode "r"
+                }                    
+            }
             set next_mode ""
         }
         ns_log Notice "q-wiki.tcl(344): mode $mode"
@@ -670,7 +683,7 @@ switch -exact -- $mode {
                 if { $live_revision_p } {
                     set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_checked_url}\" alt=\"active\" title=\"active\" width=\"13\" height=\"13\">"]
                 } elseif { !$live_revision_p && !$trashed_p } {
-                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
+                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a&next_mode=r\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
                 } else {
                     set stats_list [lreplace $stats_list 6 6 "&nbsp;"]   
                 }
