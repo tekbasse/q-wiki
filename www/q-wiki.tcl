@@ -23,6 +23,7 @@ set title "Q-Wiki"
 set package_id [ad_conn package_id]
 set user_id [ad_conn user_id]
 set read_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege read]
+set create_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege create]
 set write_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege write]
 set admin_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege admin]
 set delete_p [permission::permission_p -party_id $user_id -object_id $package_id -privilege delete]
@@ -781,30 +782,37 @@ switch -exact -- $mode {
         if { $read_p } {
             # if $url is different than ad_conn url stem, 303/305 redirect to page_id's primary url
             ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
-
+            if { $create_p } {
+                lappend menu_list [list revisions "${url}?mode=r"]
+            }
             # build menu options
             if { $write_p } {
-                lappend menu_list [list edit "${url}?mode=e"]
+                lappend menu_list [list edit "${url}?mode=e" ]
                 set menu_edit_p 1
-                if { $delete_p } {
-                    lappend menu_list [list delete ${url}?mode=d]
-                } else {
-                    # can only trash revisions, not entire page
-                    lappend menu_list [list revisions ${url}?mode=r]
-                }
             } else {
                 set menu_edit_p 0
             }
-
+            
             # get page info
-            # cannot use previous $page_id_from_url, because it might be modified from an ACTION
-            # Get it again.
-            set page_id_from_url [qw_page_id_from_url $url $package_id]
-            set page_list [qw_page_read $page_id_from_url $package_id $user_id ]
+            if { $page_id eq "" } {
+                # cannot use previous $page_id_from_url, because it might be modified from an ACTION
+                # Get it again.
+                set page_id_from_url [qw_page_id_from_url $url $package_id]
+                set page_list [qw_page_read $page_id_from_url $package_id $user_id ]
+            } else {
+                set page_list [qw_page_read $page_id $package_id $user_id ]
+            }
             set page_title [lindex $page_list 1]
             set keywords [lindex $page_list 2]
             set description [lindex $page_list 3]
             set page_contents [lindex $page_list 11]
+            set trashed_p [lindex $page_list 6]
+            # trashed pages cannot be viewed, 
+            if { $delete_p && $trashed_p } {
+                lappend menu_list [list delete "${url}?mode=d&next_mode=v&page_id=${page_id}" ]
+            } elseif { $delete_p && !$trashed_p } {
+                lappend menu_list [list trash "${url}?mode=t&next_mode=v&page_id=${page_id}" ]
+            }
 
             if { $keywords ne "" } {
                 template::head::add_meta -name keywords -content $keywords
@@ -851,7 +859,7 @@ if { $validated_p } {
     foreach item_list $menu_list {
         set menu_label [lindex $item_list 0]
         set menu_url [lindex $item_list 1]
-        append menu_html "<a href=\"${menu_url}\">${menu_label}</a>&nbsp;"
+        append menu_html "<a href=\"${menu_url}\" title=\"${menu_label}\">${menu_label}</a> &nbsp; "
     }
 } 
 set doc(title) $title

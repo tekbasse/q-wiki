@@ -271,7 +271,7 @@ ad_proc -public qw_pages {
                 set return_list [db_list wiki_pages_user_list { select id from qw_wiki_page where instance_id = :instance_id and user_id = :user_id and id in ( select page_id from qw_page_url_map where instance_id = :instance_id ) order by last_modified desc } ]
             } else {
                 # get a list of all page_ids mapped to a url for instance_id.
-                set return_list [db_list wiki_pages_list { select page_id from qw_page_url_map where instance_id = :instance_id order by last_modified desc } ]
+                set return_list [db_list wiki_pages_list { select id as page_id from qw_wiki_page where id in ( select page_id from qw_page_url_map where instance_id = :instance_id ) order by last_modified desc } ]
             }
         } else {
             # is the template_id valid?
@@ -315,6 +315,11 @@ ad_proc -public qw_page_read {
         set return_list_of_lists [db_list_of_lists wiki_page_get { select name, title, keywords, description, template_id, flags, trashed, popularity, last_modified, created, user_id, content, comments from qw_wiki_page where id = :page_id and instance_id = :instance_id } ] 
         # convert return_lists_of_lists to return_list
         set return_list [lindex $return_list_of_lists 0]
+        # convert trash null/empty value to logical 0
+        if { [llength $return_list] > 1 && [lindex $return_list 6] eq "" } {
+            set return_list [lreplace $return_list 6 6 0]
+        }
+
     }
     return $return_list
 }
