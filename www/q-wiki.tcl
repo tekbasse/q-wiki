@@ -59,7 +59,7 @@ set title $input_array(page_title)
 # get previous form inputs if they exist
 set form_posted [qf_get_inputs_as_array input_array]
 set page_id $input_array(page_id)
-set page_template_id $input_array(page_template_id)
+set  page_template_id $input_array(page_template_id)
 
 set page_name $input_array(page_name)
 set page_title $input_array(page_title)
@@ -162,17 +162,19 @@ if { $form_posted } {
         # page exists
        
 
-        set page_stats_list [qw_page_stats $page_id_from_url $package_id $user_id]
-        set page_template_id_from_db [lindex $page_stats_list 5]
-        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_template_id_from_db '$page_template_id_from_db'"
+        set page_stats_from_url_list [qw_page_stats $page_id_from_url $package_id $user_id]
+        set page_template_id_from_url [lindex $page_stats_from_url_list 5]
+        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_id_from_url '$page_id_from_url' page_template_id_from_url '$page_template_id_from_url'"
 
         # page_template_id and page_id gets checked against db for added security
         # check for form/db descrepencies
-        set pid_form_stats_list [qw_page_stats $page_id]
-        set pid_form_template_id [lindex $pid_form_stats_list 5]
+        set page_stats_from_form_list [qw_page_stats $page_id]
+        set page_template_id_from_form_pid [lindex $page_stats_from_form_list 5]
+
         # if mode is e etc, allow edit of page_id in set of page_id_from_url revisions:
-        if { $page_id ne "" && $page_template_id_from_db ne $pid_form_template_id } {
-            ns_log Notice "q-wiki/q-wiki.tcl page_id '$page_id' page_id_from_url '$page_id_from_url' page_template_id_from_db $page_template_id_from_db pid_form_template_id $pid_form_template_id"
+        # verify template_id from page_id and from url are consistent.
+        if { $page_id ne ""  && [qf_is_natural_number $page_template_id_from_url ] && $page_template_id_from_url ne $page_template_id_from_form_pid } {
+            ns_log Notice "q-wiki/q-wiki.tcl: template_ids don't match. page_id '$page_id' page_id_from_url '$page_id_from_url', page_template_id_from_url '$page_template_id_from_url' page_template_id_from_form_pid '$page_template_id_from_form_pid'"
             set page_id $page_id_from_url
             set  mode ""
             set next_mode ""
@@ -235,7 +237,7 @@ if { $form_posted } {
     ns_log Notice "q-wiki.tcl(169): mode $mode next_mode $next_mode"
     if { $mode eq "r" || $mode eq "a" } {
         if { $write_p } {
-            if { $page_template_id_from_db > 0 } {
+            if { [qf_is_natural_number $page_template_id_from_url ] } {
                 set validated_p 1
                 ns_log Notice "q-wiki.tcl validated for $mode"
             } elseif { $read_p } {
@@ -359,14 +361,15 @@ if { $form_posted } {
             #  delete.... removes context     
             ns_log Notice "q-wiki.tcl mode = delete"
             if { $delete_p } {
-                qw_page_delete $page_id $page_template_id_from_db $package_id $user_id
+                qw_page_delete $page_id $page_template_id $package_id $user_id
+#                qw_page_delete $page_id $page_template_id_from_url $package_id $user_id
             }
             set mode $next_mode
             set next_mode ""
         }
         ns_log Notice "q-wiki.tcl(358): mode $mode"
         if { $mode eq "a" } {
-            # change active revision of page_template_id_from_db to page_id
+            # change active revision of page_template_id_from_url to page_id
             if { $write_p } {
                 if { [qw_change_page_id_for_url $page_id $url $package_id] } {
                     set mode $next_mode
@@ -652,7 +655,7 @@ switch -exact -- $mode {
             
             # show page revisions
             # sort by template_id, columns
-            set template_id $page_template_id_from_db
+            set template_id $page_template_id_from_url
             # these should be sorted by last_modified
             set page_ids_list [qw_pages $package_id $user_id $template_id]
 
@@ -682,7 +685,7 @@ switch -exact -- $mode {
             foreach stats_mod_list $pages_stats_lists {
                 set stats_list [list]
                 # create these vars:
-                set index_list [list page_id 0 page_user_id 12 size 14 last_modified 10 comments 3 flags 7 live_revision_p 15 trashed_p 8]
+                set index_list [list page_id 0 page_user_id 12 size 14 last_modified 10 created 11 comments 3 flags 7 live_revision_p 15 trashed_p 8]
                 foreach {list_item_name list_item_index} $index_list {
                     set list_item_value [lindex $stats_mod_list $list_item_index]
                     set $list_item_name $list_item_value
@@ -695,15 +698,15 @@ switch -exact -- $mode {
 
                 if { $live_revision_p } {
                     if { $trashed_p } {
-                        set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_unchecked_url}\" alt=\"inactive\" title=\"inactive\" width=\"13\" height=\"13\">"]
+                        set stats_list [lreplace $stats_list 7 7 "<img src=\"${radio_unchecked_url}\" alt=\"inactive\" title=\"inactive\" width=\"13\" height=\"13\">"]
                     } else {
-                        set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_checked_url}\" alt=\"active\" title=\"active\" width=\"13\" height=\"13\">"]
+                        set stats_list [lreplace $stats_list 7 7 "<img src=\"${radio_checked_url}\" alt=\"active\" title=\"active\" width=\"13\" height=\"13\">"]
                     }
                 } else {
                     if { $trashed_p } {
-                    set stats_list [lreplace $stats_list 6 6 "&nbsp;"]   
+                    set stats_list [lreplace $stats_list 7 7 "&nbsp;"]   
                     } else {
-                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a&next_mode=r\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
+                    set stats_list [lreplace $stats_list 7 7 "<a href=\"$url?page_id=${page_id}&mode=a&next_mode=r\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
                     }
                 } 
 
@@ -717,7 +720,7 @@ switch -exact -- $mode {
                 if { ( $delete_p || $page_user_id == $user_id ) && $trashed_p } {
                     append active_link2 " &nbsp; &nbsp; <a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
                 } 
-                set stats_list [lreplace $stats_list 7 7 $active_link2]
+                set stats_list [lreplace $stats_list 8 8 $active_link2]
 
 
 
@@ -729,7 +732,7 @@ switch -exact -- $mode {
 
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "by User" Size "Last Modified" "Comments" "Flags" "Live?" "Trash status"] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "by User" Size "Last Modified" "Created" "Comments" "Flags" "Live?" "Trash status"] ]
             set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
@@ -821,31 +824,32 @@ switch -exact -- $mode {
             } else {
                 set page_list [qw_page_read $page_id $package_id $user_id ]
             }
-            set page_title [lindex $page_list 1]
-            set keywords [lindex $page_list 2]
-            set description [lindex $page_list 3]
-            set page_contents [lindex $page_list 11]
-            set trashed_p [lindex $page_list 6]
-            set template_id [lindex $page_list 4]
-            # trashed pages cannot be viewed by public, but can be viewed with permission
-            if { $delete_p && $trashed_p } {
-                lappend menu_list [list delete "${url}?mode=d&next_mode=l&template_id=${template_id}" ]
-            } elseif { $delete_p && !$trashed_p } {
-                lappend menu_list [list trash "${url}?mode=t&next_mode=v&template_id=${template_id}" ]
-            }
-
-            if { $keywords ne "" } {
+            if { [llength $page_list] > 1 } {
+                set page_title [lindex $page_list 1]
+                set keywords [lindex $page_list 2]
+                set description [lindex $page_list 3]
+                set page_contents [lindex $page_list 11]
+                set trashed_p [lindex $page_list 6]
+                set template_id [lindex $page_list 4]
+                # trashed pages cannot be viewed by public, but can be viewed with permission
+                if { $delete_p && $trashed_p } {
+                    lappend menu_list [list delete "${url}?mode=d&next_mode=l&template_id=${template_id}" ]
+                } elseif { $delete_p && !$trashed_p } {
+                    lappend menu_list [list trash "${url}?mode=t&next_mode=v&template_id=${template_id}" ]
+                }
+                
+                if { $keywords ne "" } {
                 template::head::add_meta -name keywords -content $keywords
+                }
+                if { $description ne "" } {
+                    template::head::add_meta -name description -content $description
+                }
+                set title $page_title
+                # page_contents_filtered
+                set page_contents_unquoted [ad_unquotehtml $page_contents]
+                set page_main_code [template::adp_compile -string $page_contents_unquoted]
+                set page_main_code_html [template::adp_eval page_main_code]
             }
-            if { $description ne "" } {
-                template::head::add_meta -name description -content $description
-            }
-            set title $page_title
-            # page_contents_filtered
-            set page_contents_unquoted [ad_unquotehtml $page_contents]
-            set page_main_code [template::adp_compile -string $page_contents_unquoted]
-            set page_main_code_html [template::adp_eval page_main_code]
-
         } else {
             # no permission to read page. This should not happen.
             ns_log Warning "q-wiki.tcl:(619) user did not get expected 404 error when not able to read page."
