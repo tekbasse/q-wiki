@@ -19,6 +19,13 @@
 # url has to be a given (not validated), since this page may be fed $url via an index.vuh
 
 set title "Q-Wiki"
+set icons_path1 "/resources/acs-subsite/"
+set icons_path2 "/resources/ajaxhelper/icons/"
+set delete_icon_url [file join $icons_path2 delete.png]
+set trash_icon_url [file join $icons_path2 page_delete.png]
+set untrash_icon_url [file join $icons_path2 page_add.png]
+set radio_checked_url [file join $icons_path1 radiochecked.gif]
+set radio_unchecked_url [file join $icons_path1 radio.gif]
 
 set package_id [ad_conn package_id]
 set user_id [ad_conn user_id]
@@ -63,6 +70,7 @@ set page_comments $input_array(page_comments)
 set page_contents $input_array(page_contents)
 set mode $input_array(mode)
 set next_mode $input_array(next_mode)
+
 
 # Is this a redirect from index.vuh ?
 set file_name [file tail [ad_conn file]]
@@ -584,15 +592,25 @@ switch -exact -- $mode {
                 set active_link "<a href=\"${page_url}\">$name</a>"
                 set active_link_list [list $active_link]
                 set active_link2 ""
-                if { ( $write_p || $page_user_id == $user_id ) && $trashed_p == 1 } {
-                    set trash_label "untrash"
-                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
-                } elseif { $page_user_id == $user_id || $write_p } {
-                    set trash_label "trash"
-                    set active_link2 " \[<a href=\"${page_url}?mode=t&next_mode=l\">${trash_label}</a>\]"
+
+                if {  $write_p } {
+                    # trash the page
+                    if { $trashed_p } {
+                        set active_link2 " <a href=\"${page_url}?template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
+                    } else {
+                        set active_link2 " <a href=\"${page_url}?template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
+                    }
+                } elseif { $page_user_id == $user_id } {
+                    # trash the revision
+                    if { $trashed_p } {
+                        set active_link2 " <a href=\"${page_url}?page_id=${page_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
+                    } else {
+                        set active_link2 " <a href=\"${page_url}?page_id=${page_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
+                    }
                 } 
+
                 if { $delete_p && $trashed_p } {
-                    append active_link2 " \[<a href=\"${page_url}?template_id=${template_id}&mode=d&next_mode=l\">delete</a>\]"
+                    append active_link2 " &nbsp; &nbsp; <a href=\"${page_url}?template_id=${template_id}&mode=d&next_mode=l\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
                 } 
                 set stats_list [lreplace $stats_list 0 0 $active_link]
                 set stats_list [lreplace $stats_list 1 1 $active_link2]
@@ -652,7 +670,7 @@ switch -exact -- $mode {
                 }
                 lappend stats_mod_list $url
                 lappend stats_mod_list [string length [lindex $page_list 11]]
-                lappend stats_mod_list [expr {$page_id == $page_id_active} ]
+                lappend stats_mod_list [expr { $page_id == $page_id_active } ]
                 # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url, content_length, active_revision
                 lappend pages_stats_lists $stats_mod_list
             }
@@ -660,16 +678,10 @@ switch -exact -- $mode {
             set page_stats_lists [list ]
 
             # stats_list should contain page_id, user_id, size (string_length) ,last_modified, comments,flags, live_revision_p, trashed? , actions: untrash delete
-            set icons_path1 "/resources/acs-subsite/"
-            set icons_path2 "/resources/ajaxhelper/icons/"
-            set delete_icon_url [file join $icons_path2 delete.png]
-            set trash_icon_url [file join $icons_path2 page_delete.png]
-            set untrash_icon_url [file join $icons_path2 page_add.png]
-            set radio_checked_url [file join $icons_path1 radiochecked.gif]
-            set radio_unchecked_url [file join $icons_path1 radio.gif]
 
             foreach stats_mod_list $pages_stats_lists {
                 set stats_list [list]
+                # create these vars:
                 set index_list [list page_id 0 page_user_id 12 size 14 last_modified 10 comments 3 flags 7 live_revision_p 15 trashed_p 8]
                 foreach {list_item_name list_item_index} $index_list {
                     set list_item_value [lindex $stats_mod_list $list_item_index]
@@ -682,12 +694,19 @@ switch -exact -- $mode {
                 set stats_list [lreplace $stats_list 0 0 $active_link]
 
                 if { $live_revision_p } {
-                    set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_checked_url}\" alt=\"active\" title=\"active\" width=\"13\" height=\"13\">"]
-                } elseif { !$live_revision_p && !$trashed_p } {
-                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a&next_mode=r\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
+                    if { $trashed_p } {
+                        set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_unchecked_url}\" alt=\"inactive\" title=\"inactive\" width=\"13\" height=\"13\">"]
+                    } else {
+                        set stats_list [lreplace $stats_list 6 6 "<img src=\"${radio_checked_url}\" alt=\"active\" title=\"active\" width=\"13\" height=\"13\">"]
+                    }
                 } else {
+                    if { $trashed_p } {
                     set stats_list [lreplace $stats_list 6 6 "&nbsp;"]   
-                }
+                    } else {
+                    set stats_list [lreplace $stats_list 6 6 "<a href=\"$url?page_id=${page_id}&mode=a&next_mode=r\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
+                    }
+                } 
+
                 set active_link_list [list $active_link]
                 set active_link2 ""
                 if { ( $write_p || $page_user_id == $user_id ) && $trashed_p } {
@@ -807,11 +826,12 @@ switch -exact -- $mode {
             set description [lindex $page_list 3]
             set page_contents [lindex $page_list 11]
             set trashed_p [lindex $page_list 6]
-            # trashed pages cannot be viewed, 
+            set template_id [lindex $page_list 4]
+            # trashed pages cannot be viewed by public, but can be viewed with permission
             if { $delete_p && $trashed_p } {
-                lappend menu_list [list delete "${url}?mode=d&next_mode=v&page_id=${page_id}" ]
+                lappend menu_list [list delete "${url}?mode=d&next_mode=l&template_id=${template_id}" ]
             } elseif { $delete_p && !$trashed_p } {
-                lappend menu_list [list trash "${url}?mode=t&next_mode=v&page_id=${page_id}" ]
+                lappend menu_list [list trash "${url}?mode=t&next_mode=v&template_id=${template_id}" ]
             }
 
             if { $keywords ne "" } {
