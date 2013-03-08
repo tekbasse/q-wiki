@@ -417,7 +417,8 @@ ad_proc -public qw_page_delete {
     }
     set delete_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege delete]
     set success_p 0
-
+    set page_id_active_p 0
+    ns_log Notice "qw_page_delete: delete_p '$delete_p' page_id '$page_id' template_id '$template_id'"
     if { $delete_p } {
         
         if { $page_id ne "" } {
@@ -444,7 +445,7 @@ ad_proc -public qw_page_delete {
         if { $page_id ne "" } {
             set template_id [lindex [qw_page_stats $page_id $instance_id] 5]
             # delete a revision
-            db_dml wiki_page_delete { delete from qw_wiki_page 
+            db_dml wiki_page_delete_u { delete from qw_wiki_page 
                 where id=:page_id and instance_id =:instance_id and user_id=:user_id }
             # is page_id the active revision for template_id?
             set page_id_active_p [db_0or1row qw_url_from_page_id { select url from qw_page_url_map 
@@ -454,12 +455,9 @@ ad_proc -public qw_page_delete {
             # delete all revisions of template_id and the url_mapped to it
             # get active page_id for reference later
             set page_id [qw_page_url_id_from_template_id $template_id $instance_id]
-            # delete mapped url entry
-            db_dml wiki_page_delete2 { delete from qw_page_url_map
-                where page_id =:page_id and instance_id =:instance_id}
             # delete all revisions
-            db_dml wiki_template_delete { delete from qw_wiki_page 
-                where template_id=:template_id and instance_id =:instance_id }
+            db_dml wiki_template_delete_u { delete from qw_wiki_page 
+                where template_id=:template_id and instance_id =:instance_id and user_id = :user_id }
             set page_id_active_p 1
         }
         
@@ -480,7 +478,7 @@ ad_proc -public qw_page_delete {
                 where template_id = :template_id and instance_id = :instance_id and not ( id = :page_id ) order by created desc limit 1 } ]
             if { $new_trashed_id_exists_p } {
                 db_dml wiki_page_id_update_trashed { update qw_page_url_map
-                    set page_id = :new_page_id, trashed = '1', last_modified = current_timestamp 
+                    set page_id = :new_page_id, trashed = '1'
                     where instance_id = :instance_id and page_id = :page_id }
             } else {
                 # the revision being deleted is the last revision, delete the mapped url entry
