@@ -662,18 +662,18 @@ switch -exact -- $mode {
             set pages_stats_lists [list ]
             # we get the entire data set, 1 row(list) per revision as table pages_stats_lists
             # url is same for each
-            set page_id_active $page_id_from_url
-            foreach page_id $page_ids_list {
-                set stats_mod_list [list $page_id]
-                set stats_orig_list [qw_page_stats $page_id]
-                set page_list [qw_page_read $page_id]
+            set page_id_active [qw_page_id_from_url $url $package_id]
+            foreach list_page_id $page_ids_list {
+                set stats_mod_list [list $list_page_id]
+                set stats_orig_list [qw_page_stats $list_page_id]
+                set page_list [qw_page_read $list_page_id]
                 #   a list: name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id
                 foreach stat $stats_orig_list {
                     lappend stats_mod_list $stat
                 }
                 lappend stats_mod_list $url
                 lappend stats_mod_list [string length [lindex $page_list 11]]
-                lappend stats_mod_list [expr { $page_id == $page_id_active } ]
+                lappend stats_mod_list [expr { $list_page_id == $page_id_active } ]
                 # new: page_id, name, title, comments, keywords, description, template_id, flags, trashed, popularity, time last_modified, time created, user_id, url, content_length, active_revision
                 lappend pages_stats_lists $stats_mod_list
             }
@@ -697,6 +697,7 @@ switch -exact -- $mode {
                 set stats_list [lreplace $stats_list 0 0 $active_link]
 
                 if { $live_revision_p } {
+                        # no links or actions. It's live, whatever its status
                     if { $trashed_p } {
                         set stats_list [lreplace $stats_list 7 7 "<img src=\"${radio_unchecked_url}\" alt=\"inactive\" title=\"inactive\" width=\"13\" height=\"13\">"]
                     } else {
@@ -704,9 +705,10 @@ switch -exact -- $mode {
                     }
                 } else {
                     if { $trashed_p } {
-                    set stats_list [lreplace $stats_list 7 7 "&nbsp;"]   
+                        set stats_list [lreplace $stats_list 7 7 "&nbsp;"]   
                     } else {
-                    set stats_list [lreplace $stats_list 7 7 "<a href=\"$url?page_id=${page_id}&mode=a&next_mode=r\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
+                        # it's untrashed, user can make it live.
+                        set stats_list [lreplace $stats_list 7 7 "<a href=\"$url?page_id=${page_id}&mode=a&next_mode=r\"><img src=\"${radio_unchecked_url}\" alt=\"activate\" title=\"activate\" width=\"13\" height=\"13\"></a>"]
                     }
                 } 
 
