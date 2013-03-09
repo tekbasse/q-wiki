@@ -425,7 +425,7 @@ ad_proc -public qw_page_delete {
             set template_id [lindex [qw_page_stats $page_id $instance_id] 5]
             # delete a revision
             db_dml wiki_page_delete { delete from qw_wiki_page 
-                where id=:page_id and instance_id =:instance_id }
+                where id=:page_id and instance_id =:instance_id and trashed = '1' }
             # is page_id the active revision for template_id?
             set page_id_active_p [db_0or1row qw_url_from_page_id { select url from qw_page_url_map 
                 where page_id = :page_id and instance_id = :instance_id } ]
@@ -435,7 +435,7 @@ ad_proc -public qw_page_delete {
             set page_id [qw_page_url_id_from_template_id $template_id $instance_id]
             # delete all revisions
             db_dml wiki_template_delete { delete from qw_wiki_page 
-                where template_id=:template_id and instance_id =:instance_id }
+                where template_id=:template_id and instance_id =:instance_id and trashed = '1' }
             set page_id_active_p 1
         }
 
@@ -446,7 +446,7 @@ ad_proc -public qw_page_delete {
             set template_id [lindex [qw_page_stats $page_id $instance_id] 5]
             # delete a revision
             db_dml wiki_page_delete_u { delete from qw_wiki_page 
-                where id=:page_id and instance_id =:instance_id and user_id=:user_id }
+                where id=:page_id and instance_id =:instance_id and user_id=:user_id and trashed = '1' }
             # is page_id the active revision for template_id?
             set page_id_active_p [db_0or1row qw_url_from_page_id { select url from qw_page_url_map 
                 where page_id = :page_id and instance_id = :instance_id } ]
@@ -457,7 +457,7 @@ ad_proc -public qw_page_delete {
             set page_id [qw_page_url_id_from_template_id $template_id $instance_id]
             # delete all revisions
             db_dml wiki_template_delete_u { delete from qw_wiki_page 
-                where template_id=:template_id and instance_id =:instance_id and user_id = :user_id }
+                where template_id=:template_id and instance_id =:instance_id and user_id = :user_id and trashed = '1' }
             set page_id_active_p 1
         }
         
