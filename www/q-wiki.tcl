@@ -180,6 +180,13 @@ if { $form_posted } {
             set next_mode ""
             lappend user_message_list "There has been an internal processing error. Try again or report issue to [ad_admin_owner]"
         }
+        if { $page_template_id ne ""  && [qf_is_natural_number $page_template_id ] && $page_template_id_from_url ne $page_template_id } {
+            ns_log Notice "q-wiki/q-wiki.tcl: template_ids don't match. page_template_id '$page_template_id' page_id_from_url '$page_id_from_url', page_template_id_from_url '$page_template_id_from_url'"
+            set page_template_id $page_template_id_from_url
+            set  mode ""
+            set next_mode ""
+            lappend user_message_list "There has been an internal processing error. Try again or report issue to [ad_admin_owner]"
+        }
         
         # A blank referrer means a direct request
         # otherwise make sure referrer is from same domain when editing
@@ -835,9 +842,9 @@ switch -exact -- $mode {
                 set template_id [lindex $page_list 4]
                 # trashed pages cannot be viewed by public, but can be viewed with permission
                 if { $delete_p && $trashed_p } {
-                    lappend menu_list [list delete "${url}?mode=d&next_mode=l&template_id=${template_id}" ]
+                    lappend menu_list [list delete "${url}?mode=d&next_mode=l&page_template_id=${template_id}" ]
                 } elseif { $delete_p && !$trashed_p } {
-                    lappend menu_list [list trash "${url}?mode=t&next_mode=v&template_id=${template_id}" ]
+                    lappend menu_list [list trash "${url}?mode=t&next_mode=v&page_template_id=${template_id}" ]
                 }
                 
                 if { $keywords ne "" } {
