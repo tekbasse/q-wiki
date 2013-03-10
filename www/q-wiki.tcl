@@ -606,9 +606,9 @@ switch -exact -- $mode {
                 if {  $write_p } {
                     # trash the page
                     if { $trashed_p } {
-                        set active_link2 " <a href=\"${page_url}?template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
+                        set active_link2 " <a href=\"${page_url}?page_template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
                     } else {
-                        set active_link2 " <a href=\"${page_url}?template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
+                        set active_link2 " <a href=\"${page_url}?page_template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
                     }
                 } elseif { $page_user_id == $user_id } {
                     # trash the revision
@@ -620,7 +620,7 @@ switch -exact -- $mode {
                 } 
 
                 if { $delete_p && $trashed_p } {
-                    append active_link2 " &nbsp; &nbsp; <a href=\"${page_url}?template_id=${template_id}&mode=d&next_mode=l\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
+                    append active_link2 " &nbsp; &nbsp; <a href=\"${page_url}?page_template_id=${template_id}&mode=d&next_mode=l\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
                 } 
                 set stats_list [lreplace $stats_list 0 0 $active_link]
                 set stats_list [lreplace $stats_list 1 1 $active_link2]
@@ -658,7 +658,6 @@ switch -exact -- $mode {
         #  revisions...... presents a list of page revisions
         if { $write_p } {
             ns_log Notice "q-wiki.tcl mode = $mode ie. revisions"
-            append title " page revisions"
             
             # show page revisions
             # sort by template_id, columns
@@ -689,6 +688,11 @@ switch -exact -- $mode {
 
             # stats_list should contain page_id, user_id, size (string_length) ,last_modified, comments,flags, live_revision_p, trashed? , actions: untrash delete
 
+            set contributor_nbr 0
+            set contributor_last_id ""
+            set page_name [lindex [lindex $pages_stats_lists 0] 1]
+            append title "${page_name} - page revisions"
+
             foreach stats_mod_list $pages_stats_lists {
                 set stats_list [list]
                 # create these vars:
@@ -702,6 +706,14 @@ switch -exact -- $mode {
 
                 set active_link "<a href=\"${url}?page_id=$page_id&mode=e\">${page_id}</a>"
                 set stats_list [lreplace $stats_list 0 0 $active_link]
+
+                if { $page_user_id ne $contributor_last_id } {
+                    set contributor_last_id $page_user_id
+                    incr contributor_nbr
+                }
+                set contributor_title ${contributor_nbr}
+                set active_link3 " &nbsp; <a href=\"/shared/community-member?user_id=${page_user_id}\" title=\"page contributor ${contributor_title}\">${contributor_title}</a>"
+                set stats_list [lreplace $stats_list 1 1 $active_link3]
 
                 if { $live_revision_p } {
                         # no links or actions. It's live, whatever its status
@@ -741,7 +753,7 @@ switch -exact -- $mode {
 
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "by User" Size "Last Modified" "Created" "Comments" "Flags" "Live?" "Trash status"] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "Contributor" "Length" "Last Modified" "Created" "Comments" "Flags" "Live?" "Trash status"] ]
             set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
@@ -756,7 +768,7 @@ switch -exact -- $mode {
             #  edit...... edit/form mode of current context
 
             ns_log Notice "q-wiki.tcl mode = edit"
-            append title " edit"
+
             # for existing pages, add template_id
             set conn_package_url [ad_conn package_url]
             set post_url [file join $conn_package_url $url]
@@ -774,8 +786,9 @@ switch -exact -- $mode {
                 set page_contents [lindex $page_list 11]
                 set page_comments [lindex $page_list 12]
             }
+            append title "${page_name} -  edit"
 
-            qf_form action $post_url method get id 20130128
+            qf_form action $post_url method post id 20130309
             qf_input type hidden value w name mode
             qf_input type hidden value v name next_mode
             qf_input type hidden value $page_flags name page_flags
@@ -813,6 +826,8 @@ switch -exact -- $mode {
         if { $read_p } {
             # if $url is different than ad_conn url stem, 303/305 redirect to page_id's primary url
             ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
+            lappend menu_list [list index "index?mode=l"]
+
             if { $create_p } {
                 lappend menu_list [list revisions "${url}?mode=r"]
             }
