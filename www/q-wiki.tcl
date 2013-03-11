@@ -521,7 +521,7 @@ if { $form_posted } {
                     # a different user_id makes new context based on current context, otherwise modifies same context
                     # or create a new context if no context provided.
                     # given:
-                    
+
                     # create or write page
                     if { $page_id eq "" } {
                         # create page
@@ -532,12 +532,24 @@ if { $form_posted } {
                         }
                     } else {
                         # write page
-                        set success_p [qw_page_write $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_id $page_template_id $page_flags $package_id $user_id]
-                        if { $success_p == 0 } {
+                        set page_id [qw_page_write $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_id $page_template_id $page_flags $package_id $user_id]
+                        if { $page_id eq "" } {
                             ns_log Warning "q-wiki/q-wiki.tcl page write error for url '${url}'"
                             lappend user_messag_list "There was an error creating the wiki page at '${url}'."
                         }
                     }
+
+                    # rename existing pages?
+                    if { $url ne $page_name } {
+                        # rename url, but first post the page
+                        if { [qw_page_rename $url $page_name $package_id ] } {
+                            # if success, update url and redirect
+                            set redirect_before_v_p 1
+                            set url $page_name
+                            set next_mode "v"
+                        }
+                    }
+
                     # switch modes..
                     ns_log Notice "q-wiki.tcl(396): activating next mode $next_mode"
                     set mode $next_mode

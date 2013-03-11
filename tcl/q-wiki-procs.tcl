@@ -52,6 +52,53 @@ ad_proc -public qw_change_page_id_for_url {
     return $success_p
 }
 
+# qw_page_rename start
+ad_proc -public qw_page_rename {
+    page_url
+    page_name
+    {instance_id ""}
+} {
+    Changes the url where the page is served from page_url to page_name. Returns 1 if successful, otherwise 0.
+} {
+    if { $instance_id eq "" } {
+        # set instance_id package_id
+        set instance_id [ad_conn package_id]
+    }
+    set user_id [ad_conn user_id]
+    set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write] 
+    set success_p 0
+    if { $write_p && $page_url ne "" && $page_name ne "" } {
+        set page_urls_id [qw_page_id_from_url $page_url $instance_id]
+        set page_stats_list [qw_page_stats $page_urls_id $instance_id]
+        set template_id [lindex $page_stats_list 5]
+        # does page_name already exist? 
+        set pn_page_id  [qw_page_id_from_url $page_name $instance_id]
+
+        if { $pn_page_id ne "" } {
+            set pn_stats_list [qw_page_stats $pn_page_id $instance_id]
+            set pn_template_id [lindex $pn_stats_list 5]
+            # just:
+            # mv the template_id of page_url revisions to page_name revisions template_id
+            db_dml wiki_name_change_template_id { update qw_wiki_page
+                set last_modified = current_timestamp, template_id =:pn_template_id, name =:page_name where template_id = :template_id and instance_id = :instance_id }
+            # get rid of the existing page_name entry
+            db_dml wiki_name_change_url_del { delete from qw_page_url_map
+                where url = :page_url and instance_id = :instance_id }
+            
+        } else {
+            # update qw_page_url_map.url qw_wiki_page.page_name to page_name for template_id, instance_id
+            db_dml wiki_name_change_pages { update qw_wiki_page
+                set last_modified = current_timestamp, name = :page_name where template_id = :template_id and instance_id = :instance_id }
+            db_dml wiki_name_change_url { update qw_page_url_map
+                set url = :page_name where url = :page_url and instance_id = :instance_id }
+        }
+        set success_p 1
+    }
+    return $success_p
+}
+
+
+#
 ad_proc -public qw_page_id_from_url { 
     page_url
     {instance_id ""}
@@ -353,7 +400,7 @@ ad_proc -public qw_page_write {
     {instance_id ""}
     {user_id ""}
 } {
-    Writes a new revision of an existing q-wiki page. page_id is a revision of template_id.
+    Writes a new revision of an existing q-wiki page. page_id is an existing revision of template_id. returns the new page_id or a blank page_id if unsuccessful.
 } {
     if { $instance_id eq "" } {
         # set instance_id package_id
@@ -364,6 +411,8 @@ ad_proc -public qw_page_write {
         set untrusted_user_id [ad_conn untrusted_user_id]
     }
     set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]
+    set new_page_id ""
+
     if { $write_p } {
         set page_exists_p [db_0or1row wiki_page_get_user_id {select user_id as creator_id from qw_wiki_page where id = :page_id } ]
         if { $page_exists_p } { 
@@ -395,7 +444,7 @@ ad_proc -public qw_page_write {
     } else {
         set success_p 0
     }
-    return $success_p
+    return $new_page_id
 }
 
 
