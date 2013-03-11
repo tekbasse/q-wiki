@@ -103,7 +103,7 @@ if { [ns_urldecode $input_array(url_referring)] eq "index.vuh" && $file_name eq 
     ad_script_abort
 }
 
-if { $url eq "" } {
+if { $url eq "" || $url eq "/" } {
     set url "index"
 }
 
@@ -584,7 +584,15 @@ switch -exact -- $mode {
     l {
         #  list...... presents a list of pages  (Branch this off as a procedure and/or lib page fragment to be called by view action)
         if { $read_p } {
+            if { $redirect_before_v_p } {
+                ns_log Notice "q-wiki.tcl(587): redirecting to url $url for clean url view"
+                ad_returnredirect "$url?mode=l"
+                ad_script_abort
+            }
+
             ns_log Notice "q-wiki.tcl(427): mode = $mode ie. list of pages, index"
+            lappend menu_list [list edit "${url}?mode=e" ]
+
             append title " index" 
             # show page
             # sort by template_id, columns
@@ -681,8 +689,12 @@ switch -exact -- $mode {
     }
     r {
         #  revisions...... presents a list of page revisions
+            lappend menu_list [list index "index?mode=l"]
+
         if { $write_p } {
             ns_log Notice "q-wiki.tcl mode = $mode ie. revisions"
+            # build menu options
+            lappend menu_list [list edit "${url}?mode=e" ]
             
             # show page revisions
             # sort by template_id, columns
@@ -789,10 +801,13 @@ switch -exact -- $mode {
 
     }
     e {
+
+
         if { $write_p } {
             #  edit...... edit/form mode of current context
 
             ns_log Notice "q-wiki.tcl mode = edit"
+            set cancel_link_html "<a hrer=\"list?mode=l\">Cancel</a>"
 
             # for existing pages, add template_id
             set conn_package_url [ad_conn package_url]
@@ -800,6 +815,7 @@ switch -exact -- $mode {
 
             ns_log Notice "q-wiki.tcl(636): conn_package_url $conn_package_url post_url $post_url"
             if { $page_id_from_url ne "" && [llength $user_message_list ] == 0 } {
+
                 # get page info
                 set page_list [qw_page_read $page_id_from_url $package_id $user_id ]
                 set page_name [lindex $page_list 0]
@@ -810,7 +826,10 @@ switch -exact -- $mode {
                 set page_flags [lindex $page_list 5]
                 set page_contents [lindex $page_list 11]
                 set page_comments [lindex $page_list 12]
-            }
+
+                set cancel_link_html "<a href=\"$page_name\">Cancel</a>"
+            } 
+           
             append title "${page_name} -  edit"
 
             qf_form action $post_url method post id 20130309
@@ -840,6 +859,7 @@ switch -exact -- $mode {
             qf_input type text value $keywords_unquoted name keywords label "Keywords:" size 40 maxlength 80
             qf_append html "</div>"
             qf_input type submit value "Save"
+            qf_append html " &nbsp; &nbsp; &nbsp; ${cancel_link_html}"
             qf_close
             set form_html [qf_read]
         } else {
@@ -857,19 +877,9 @@ switch -exact -- $mode {
                 ad_script_abort
             }
             ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
+
             lappend menu_list [list index "index?mode=l"]
 
-            if { $create_p } {
-                lappend menu_list [list revisions "${url}?mode=r"]
-            }
-            # build menu options
-            if { $write_p } {
-                lappend menu_list [list edit "${url}?mode=e" ]
-                set menu_edit_p 1
-            } else {
-                set menu_edit_p 0
-            }
-            
             # get page info
             if { $page_id eq "" } {
                 # cannot use previous $page_id_from_url, because it might be modified from an ACTION
@@ -879,6 +889,14 @@ switch -exact -- $mode {
             } else {
                 set page_list [qw_page_read $page_id $package_id $user_id ]
             }
+
+            if { $create_p } {
+                if { $page_id_from_url ne "" || $page_id ne "" } {
+                    lappend menu_list [list revisions "${url}?mode=r"]
+                } 
+                lappend menu_list [list edit "${url}?mode=e" ]
+            }
+            
             if { [llength $page_list] > 1 } {
                 set page_title [lindex $page_list 1]
                 set keywords [lindex $page_list 2]
