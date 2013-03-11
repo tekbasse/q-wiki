@@ -26,6 +26,7 @@ set trash_icon_url [file join $icons_path2 page_delete.png]
 set untrash_icon_url [file join $icons_path2 page_add.png]
 set radio_checked_url [file join $icons_path1 radiochecked.gif]
 set radio_unchecked_url [file join $icons_path1 radio.gif]
+set redirect_before_v_p 0
 
 set package_id [ad_conn package_id]
 set user_id [ad_conn user_id]
@@ -164,7 +165,7 @@ if { $form_posted } {
 
         set page_stats_from_url_list [qw_page_stats $page_id_from_url $package_id $user_id]
         set page_template_id_from_url [lindex $page_stats_from_url_list 5]
-        ns_log Notice "q-wiki/www/q-wiki.tcl(106): page_id_from_url '$page_id_from_url' page_template_id_from_url '$page_template_id_from_url'"
+        ns_log Notice "q-wiki.tcl(106): page_id_from_url '$page_id_from_url' page_template_id_from_url '$page_template_id_from_url'"
 
         # page_template_id and page_id gets checked against db for added security
         # check for form/db descrepencies
@@ -203,12 +204,14 @@ if { $form_posted } {
         # user permissions can be supported.
         # set original_user_id \[lindex $page_stats_list_of_template_id 11\]
 
-    } elseif { $write_p && $mode ne "l" && $mode ne "w" } {
+    } else {
         # page does not exist
-        # present an edit/new page
-        set mode "e"
-        set next_mode ""
-        set validated_p 1
+        if { $write_p && $mode ne "l" && $mode ne "w" } {
+            # present an edit/new page
+            set mode "e"
+            set next_mode ""
+            set validated_p 1
+        }
     } 
     # else should default to 404 at switch in View section.
 
@@ -216,7 +219,13 @@ if { $form_posted } {
     # failovers for permissions follow reverse order (skipping ok): admin_p delete_p write_p create_p read_p
     # possibilities are: d, t, w, e, v, l, r, "" where "" is invalid input or unreconcilable error condition.
     # options include    d, l, r, t, e, "", w, v
-    ns_log Notice "q-wiki/www/q-wiki.tcl(141): initial mode $mode, next_mode $next_mode"
+    set http_header_method [ad_conn method]
+    ns_log Notice "q-wiki.tcl(141): initial mode $mode, next_mode $next_mode, http_header_method ${http_header_method}"
+    if { ( $next_mode eq "v" || $next_mode eq "l" ) && [string match -nocase GET $http_header_method] } {
+        # redirect when viewing, to clean the url
+        ns_log Notice "q-wiki.tcl(223): Setting redirect_before_v_p "
+        set redirect_before_v_p 1
+    } 
     if { $mode eq "d" } {
         if { $delete_p } {
             ns_log Notice "q-wiki.tcl validated for d"
@@ -249,7 +258,7 @@ if { $form_posted } {
                 ns_log Notice "q-wiki.tcl validated for $mode"
             } elseif { $read_p } {
                 # This is a 404 return, but we list pages for more convenient UI
-                lappend user_message_list "Page not found. Showing a list of choices."
+                lappend user_message_list "Page not found. Showing a list of pages."
                 set mode "l"
             }
         } else {
@@ -393,12 +402,15 @@ if { $form_posted } {
             #  toggle trash
             ns_log Notice "q-wiki.tcl mode = trash"
             # which page to trash page_id or page_id_from_url?
-            if { ![qw_page_id_exists $page_id $package_id] } {
-                set page_id $page_id_from_url
+            if { $page_id ne "" } {
+                set page_id_stats [qw_page_stats $page_id]
+                set trashed_p [lindex $page_id_stats 7]
+                set page_user_id [lindex $page_id_stats 11]
+            } elseif { $page_template_id ne "" } {
+                set page_id_stats [qw_page_stats $page_id_from_url]
+                set trashed_p [lindex $page_id_stats 7]
+                set page_user_id [lindex $page_id_stats 11]
             }
-            set page_id_stats [qw_page_stats $page_id]
-            set trashed_p [lindex $page_id_stats 7]
-            set page_user_id [lindex $page_id_stats 11]
 #            set template_id \[lindex $page_id_stats 5\]
             set trash_done_p 0
             if { $write_p || $page_user_id eq $user_id } {
@@ -407,7 +419,8 @@ if { $form_posted } {
                 } else {
                     set trash "1"
                 }
-                set trash_done_p [qw_page_trash $page_id $trash]
+                ns_log Notice "q-wiki.tcl(419): qw_page_trash page_id $page_id trash_p $trash templat_id $page_template_id"
+                set trash_done_p [qw_page_trash $page_id $trash $page_template_id]
                 set mode $next_mode
             } 
             if { !$trash_done_p } {
@@ -825,6 +838,12 @@ switch -exact -- $mode {
         #  view page(s) (standard, html page document/report)
         if { $read_p } {
             # if $url is different than ad_conn url stem, 303/305 redirect to page_id's primary url
+            
+            if { $redirect_before_v_p } {
+                ns_log Notice "q-wiki.tcl(835): redirecting to url $url for clean url view"
+                ad_returnredirect $url
+                ad_script_abort
+            }
             ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
             lappend menu_list [list index "index?mode=l"]
 

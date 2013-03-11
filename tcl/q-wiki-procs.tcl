@@ -516,6 +516,7 @@ ad_proc -public qw_page_trash {
         set untrusted_user_id [ad_conn untrusted_user_id]
     }
     set write_p [permission::permission_p -party_id $user_id -object_id $instance_id -privilege write]
+    set page_id_active_p 0
 
     # if write_p, don't need to scope to user_id == page_user_id
     if { $write_p } {
@@ -531,14 +532,14 @@ ad_proc -public qw_page_trash {
             set page_id_active_p [db_0or1row qw_url_from_page_id { select url from qw_page_url_map 
                 where page_id = :page_id and instance_id = :instance_id } ]
 
-        } elseif { $template_id > 0 } {
-            # wtp = write privilege trash page ie bulk trashing revisions
-            db_dml wiki_page_trash_wtp { update qw_wiki_page set trashed =:trash_p, last_modified = current_timestamp
-                where template_id=:template_id and instance_id =:instance_id }
+        } elseif { $template_id ne "" } {
             set url [qw_page_url_from_id $template_id]
             # template_id affects all revisions. 
             # page_id is blank. set page_id to page url's page_id
             set page_id [qw_page_id_from_url $url]
+            # wtp = write privilege trash page ie bulk trashing revisions
+            db_dml wiki_page_trash_wtp { update qw_wiki_page set trashed =:trash_p, last_modified = current_timestamp
+                where template_id=:template_id and instance_id =:instance_id }
             set page_id_trash_p 1
         }
 
@@ -557,14 +558,14 @@ ad_proc -public qw_page_trash {
             set page_id_active_p [db_0or1row qw_url_from_page_id { select url from qw_page_url_map 
                 where page_id = :page_id and instance_id = :instance_id } ]
             
-        } elseif { $template_id > 0 } {
+        } elseif { $template_id ne "" 0 } {
             # trash for all revisions possible for same template_id
+            set url [qw_page_url_from_id $template_id]
+            set page_id [qw_page_id_from_url $url]
             
             # utp = user privilege trash page (as many revisions as they created)
             db_dml wiki_page_trash_utp { update qw_wiki_page set trashed =:trash_p, last_modified = current_timestamp
                 where template_id=:template_id and instance_id =:instance_id and user_id=:user_id }            
-            set url [qw_page_url_from_id $template_id]
-            set page_id [qw_page_id_from_url $url]
             set page_id_active_p 1
         }
         
@@ -580,7 +581,7 @@ ad_proc -public qw_page_trash {
         set new_page_id_exists [db_0or1row qw_available_page_id { select id as new_page_id from qw_wiki_page 
             where template_id = :template_id and instance_id = :instance_id and not (trashed = '1') and not ( id =:page_id ) order by created desc limit 1 } ]
         if { $new_page_id_exists } {
-            ns_log Notice "qw_page_trash: new_page_id $new_page_id"
+            ns_log Notice "qw_page_trash(583): new_page_id $new_page_id"
             #  point to the most recent untrashed revision
             if { $page_id ne $new_page_id } {
                 ns_log Notice "qw_page_trash: changing active page_id from $page_id to $new_page_id"
@@ -594,9 +595,14 @@ ad_proc -public qw_page_trash {
 
     if { !$trash_p } {
         # if page_id of url_map is trashed, untrash it.
+
         db_0or1row qw_page_url_trashed_p { select trashed as url_trashed_p from qw_page_url_map
             where url = :url and instance_id = :instance_id }
-        if { [info exists url_trashed_p] && $url_trashed_p } {
+        set url_trashed_p_exists_p [info exists url_trashed_p]
+        if { !$url_trashed_p_exists_p || ( $url_trashed_p_exists_p && $url_trashed_p ne "1" ) } {
+            set url_trashed_p 0
+        }
+        if { $url_trashed_p } {
             set url_page_id [qw_page_id_from_url $url $instance_id]
  #           ns_log Notice "qw_page_trash(603): updating trash and page_id '$url_page_id' for url '$url' to page_id '$page_id' untrashed"
             db_dml wiki_page_url_map_update2 { update qw_page_url_map set page_id = :page_id, trashed = :trash_p
