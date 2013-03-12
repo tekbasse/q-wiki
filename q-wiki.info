@@ -9,17 +9,18 @@
     <implements-subsite-p>f</implements-subsite-p>
     <inherit-templates-p>f</inherit-templates-p>
     
-    <version name="5.85b" url="http://openacs.org/repository/download/apm/q-wiki-5.85b.apm">
+    <version name="5.89b" url="http://openacs.org/repository/download/apm/q-wiki-5.89b.apm">
         <owner url="mailto:kappa@dekka.com">Benjamin Brink</owner>
         <owner url="http://openacs.org">OpenACS Community</owner>
         <summary>A wiki and templating system</summary>
-        <vendor url="http://dekka.com">Dekka</vendor>
+        <vendor url="http://openacs.org/xowiki/ecommerce-g2">Ecommerce-G2</vendor>
         <description format="text/plain">A wiki and templating system derived from the ecommerce product templating system.</description>
-        <maturity>0</maturity>
+        <maturity>1</maturity>
 
-        <provides url="q-wiki" version="5.85b"/>
+        <provides url="q-wiki" version="5.89b"/>
 
         <requires url="q-forms" version="0.1d"/>
+        <requires url="spreadsheet" version="0.1d"/>
         <requires url="ajaxhelper" version="0.87d"/>
         <callbacks>
         </callbacks>
@@ -28,7 +29,7 @@
             <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="PageTitleLen"  default="80" description="Maximum characters in a page title. Database has a limit of 300" section_name="validation"/>
             <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="PageNameLen"  default="40" description="Maximum characters in a page name (tail of the url). Database has a limit of 300" section_name="validation"/>
             <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="BannedProc"  default="upvar uplevel proc sourcerename gets open ns_*" description="A separated list of all procedures names that cause the entire template to fail." section_name="security"/>
-            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="AllowedProc"  default="qaf_* f::* acc_fin::* expr set" description="A space separated list of all procedure names that people may use. Screening uses STRING MATCH, so globs are okay. See defaults for example." section_name="security"/>
+            <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="AllowedProc"  default="qaf_* f::* acc_fin::* qw_contributors qw_most_recent_edit_stats qw_user_contributions template::util::tcl_to_sql_list expr set lindex llength" description="A space separated list of all procedure names that people may use. Screening uses STRING MATCH, so globs are okay. See defaults for example." section_name="security"/>
         </parameters>
 
     </version>

@@ -832,6 +832,22 @@ switch -exact -- $mode {
            
             append title "${page_name} -  edit"
 
+            set rows_list [split $page_contents "\n\r"]
+            set rows_max [llength $rows_list]
+            set columns_max 40
+            foreach row $rows_list {
+                set col_len [string length $row]
+                if { $col_len > $columns_max } {
+                    set columns_max $col_len
+                }
+            }
+            if { $rows_max > 200 } {
+                set rows_max [expr { int( sqrt( hypot( $columns_max, $rows_max ) ) ) } ]
+            }
+            set columns_max [f::min 200 $columns_max]
+            set rows_max [f::min 800 $rows_max]
+            set rows_max [f::max $rows_max 6]
+
             qf_form action $post_url method post id 20130309
             qf_input type hidden value w name mode
             qf_input type hidden value v name next_mode
@@ -853,7 +869,7 @@ switch -exact -- $mode {
             qf_textarea value $page_comments_unquoted cols 40 rows 3 name page_comments label "Comments:"
             qf_append html "<br>"
             set page_contents_unquoted [ad_unquotehtml $page_contents]
-            qf_textarea value $page_contents_unquoted cols 40 rows 6 name page_contents label "Contents:"
+            qf_textarea value $page_contents_unquoted cols $columns_max rows $rows_max name page_contents label "Contents:"
             qf_append html "<br>"
             set keywords_unquoted [ad_unquotehtml $keywords]
             qf_input type text value $keywords_unquoted name keywords label "Keywords:" size 40 maxlength 80

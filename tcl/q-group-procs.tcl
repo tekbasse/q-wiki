@@ -26,7 +26,8 @@ ad_proc -public qw_contributors {
         set rev_user_ids_list [db_list_of_lists qw_contributor_user_ids { select user_id from qw_wiki_page where instance_id =:instance_id order by last_modified desc } ]
     }
     set user_id_list [list ]
-    foreach user_id $rev_user_ids_list {
+    foreach rev_user_id_list $rev_user_ids_list {
+        set user_id [lindex $rev_user_id_list 0]
         if { [lsearch -exact $user_id_list $user_id] == -1 } {
             lappend user_id_list $user_id
         }
@@ -45,9 +46,9 @@ ad_proc -public qw_most_recent_edit_stats {
         set instance_id [ad_conn package_id]
     }
     if { $template_id ne "" } {
-        rev_exists_p [db_0or1row qw_most_recent_template_edits { select user_id, last_modified from qw_wiki_page where template_id = :template_id and instance_id = :instance_id order by last_modified desc limit 1 } ]
+        set rev_exists_p [db_0or1row qw_most_recent_template_edits { select user_id, last_modified, id as page_id from qw_wiki_page where template_id = :template_id and instance_id = :instance_id order by last_modified desc limit 1 } ]
     } else {
-        rev_exists_p [db_0or1row qw_most_recent_instance_edits { select user_id, last_modified from qw_wiki_page where template_id = :template_id and instance_id = :instance_id order by last_modified desc limit 1 } ]
+        set  rev_exists_p [db_0or1row qw_most_recent_instance_edits { select user_id, last_modified, id as page_id from qw_wiki_page where instance_id = :instance_id order by last_modified desc limit 1 } ]
     }
     if { $rev_exists_p } {
         set stats_list [list $user_id $last_modified $page_id]
@@ -70,7 +71,7 @@ ad_proc -public qw_user_contributions {
     if { $user_id eq "" } {
         set user_id [ad_conn user_id]
     }
-    set page_ids_list [db_list_of_lists qw_contributor_page_ids { select page_id from qw_wiki_page where instance_id =:instance_id order by last_modified desc } ]    
+    set page_ids_list [db_list_of_lists qw_contributor_page_ids { select id from qw_wiki_page where instance_id =:instance_id order by last_modified desc } ]    
 
     return $page_ids_list
 }
