@@ -180,6 +180,7 @@ if { $form_posted } {
             set  mode ""
             set next_mode ""
             lappend user_message_list "There has been an internal processing error. Try again or report issue to [ad_admin_owner]"
+            util_user_message -message [lindex $user_message_list end]
         }
         if { $page_template_id ne ""  && [qf_is_natural_number $page_template_id ] && $page_template_id_from_url ne $page_template_id } {
             ns_log Notice "q-wiki/q-wiki.tcl: template_ids don't match. page_template_id '$page_template_id' page_id_from_url '$page_id_from_url', page_template_id_from_url '$page_template_id_from_url'"
@@ -187,6 +188,7 @@ if { $form_posted } {
             set  mode ""
             set next_mode ""
             lappend user_message_list "There has been an internal processing error. Try again or report issue to [ad_admin_owner]"
+            util_user_message -message [lindex $user_message_list end]
         }
         
         # A blank referrer means a direct request
@@ -259,6 +261,7 @@ if { $form_posted } {
             } elseif { $read_p } {
                 # This is a 404 return, but we list pages for more convenient UI
                 lappend user_message_list "Page not found. Showing a list of pages."
+            util_user_message -message [lindex $user_message_list end]
                 set mode "l"
             }
         } else {
@@ -392,6 +395,7 @@ if { $form_posted } {
                     set page_id_from_url $page_id
                 } else {
                     lappend user_message_list "Revision could not be made active. Try again or report issue to [ad_admin_owner]"
+            util_user_message -message [lindex $user_message_list end]
                     set mode "r"
                 }                    
             }
@@ -425,6 +429,7 @@ if { $form_posted } {
             } 
             if { !$trash_done_p } {
                 lappend user_message_list "Item could not be trashed. You don't have permission to trash this item."
+            util_user_message -message [lindex $user_message_list end]
             }
             set next_mode ""
             # update the page_id
@@ -448,7 +453,7 @@ if { $form_posted } {
                     set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
                     set allowed_proc_list [split [parameter::get -package_id $package_id -parameter AllowedProc]]
                     
-                    set code_block_list [qf_get_contents_from_tags_list "<%=" "%>" $page_contents]
+                    set code_block_list [qf_get_contents_from_tags_list "<%" "%>" $page_contents]
                     foreach code_block $code_block_list {
                         # split into lines
                         set code_segments_list [split $code_block \n\r]
@@ -486,11 +491,13 @@ if { $form_posted } {
                                                 set proc_allowed_p 0
                                                 lappend flagged_list $executable
                                                 lappend user_message_list "'$executable' is banned from use."
+            util_user_message -message [lindex $user_message_list end]
                                             }
                                         }            
                                     } else {
                                         lappend flagged_list $executable
                                         lappend user_message_list "'$executable' is not allowed at this time."
+            util_user_message -message [lindex $user_message_list end]
                                     }
                                 }
                             }
@@ -557,6 +564,7 @@ if { $form_posted } {
             } else {
                 # does not have permission to write
                 lappend user_message_list "Write operation could not be completed. You don't have permission."
+            util_user_message -message [lindex $user_message_list end]
                 ns_log Notice "q-wiki.tcl(402) User attempting to write content without permission."
                 if { $read_p } {
                     set mode "v"
@@ -880,6 +888,7 @@ switch -exact -- $mode {
             set form_html [qf_read]
         } else {
             lappend user_message_list "Edit operation could not be completed. You don't have permission."
+            util_user_message -message [lindex $user_message_list end]
         }
     }
     v {
@@ -962,10 +971,11 @@ switch -exact -- $mode {
 }
 # end of switches
 
-set user_message_html ""
-foreach user_message $user_message_list {
-    append user_message_html "<li>${user_message}</li>"
-}
+# using OpenACS built-in util_get_user_messages feature
+#set user_message_html ""
+#foreach user_message $user_message_list {
+#    append user_message_html "<li>${user_message}</li>"
+#}
 
 set menu_html ""
 if { $validated_p } {

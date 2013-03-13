@@ -20,7 +20,7 @@ Q-Wiki is derived from OpenACS' ecommerce package. Administrators
 license
 -------
 Copyright (c) 2013 Benjamin Brink
-po box 20, Marylhurst, OR 97036-0020
+po box 20, Marylhurst, OR 97036-0020 usa
 email: kappa@dekka.com
 
 Q-Wiki is open source and published under the GNU General Public License, consistent with the OpenACS system: http://www.gnu.org/licenses/gpl.html
