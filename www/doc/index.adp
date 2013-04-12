@@ -1,10 +1,11 @@
 <master>
   <property name="title">@title;noquote@</property>
   <property name="context">@context;noquote@</property>
+<h1>Q-Wiki Documentation</h1>
 
-<p>(c) 2013 by Benjamin Brink
+<pre>(c) 2013 by Benjamin Brink
 po box 20, Marylhurst, OR 97036-0020 usa
-email: kappa@dekka.com</p>
+email: kappa@dekka.com</pre>
 <p>Open source <a href="LICENSE.html">License under GNU GPL</a></p>
 <pre>
     This program is free software: you can redistribute it and/or modify

@@ -52,15 +52,23 @@ array set input_array [list \
                            reset "" \
                            mode "v" \
                            next_mode "" \
+                           url_referring "" \
                           ]
 
 set user_message_list [list ]
 set title $input_array(page_title)
 
 # get previous form inputs if they exist
-set form_posted [qf_get_inputs_as_array input_array]
+set form_posted [qf_get_inputs_as_array input_array2]
+if { $form_posted && ( $input_array2(mode) eq "w" || $input_array2(mode) eq "d" ) } {
+    # do this again for hash_check to avoid irreversable cases.
+    array unset input_array2
+    set form_posted [qf_get_inputs_as_array input_array hash_check 1]
+} else {
+    array set input_array [array get input_array2]
+}
 set page_id $input_array(page_id)
-set  page_template_id $input_array(page_template_id)
+set page_template_id $input_array(page_template_id)
 
 set page_name $input_array(page_name)
 set page_title $input_array(page_title)
@@ -95,6 +103,11 @@ if { [ns_urldecode $input_array(url_referring)] eq "index.vuh" && $file_name eq 
     # is this code executing inside index.vuh?
     set url [ad_conn path_info]
     ns_log Notice "q-wiki.tcl(29): file_name ${file_name}. Setting url to $url"
+} elseif { !$form_posted && $input_array(url_referring) eq "" } {
+    # this test is for cases where hash_check is required for form posts
+    # but no user form has been posted, default values still need to be passed.
+    set url [ad_conn path_info]
+    set file_name $url
 } else {
     # A serious assumption has broken.
     ns_log Warning "q-wiki.tcl(75): quit with referr_url and file_name out of boundary. Check log for request details."
@@ -856,7 +869,7 @@ switch -exact -- $mode {
             set rows_max [f::min 800 $rows_max]
             set rows_max [f::max $rows_max 6]
 
-            qf_form action $post_url method post id 20130309
+            qf_form action $post_url method post id 20130309 hash_check 1
             qf_input type hidden value w name mode
             qf_input type hidden value v name next_mode
             qf_input type hidden value $page_flags name page_flags
@@ -978,7 +991,8 @@ switch -exact -- $mode {
 #}
 
 set menu_html ""
-if { $validated_p } {
+set validated_p_exists [info exists validated_p]
+if { $validated_p_exists && $validated_p || !$validated_p_exists } {
     foreach item_list $menu_list {
         set menu_label [lindex $item_list 0]
         set menu_url [lindex $item_list 1]
