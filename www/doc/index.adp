@@ -30,7 +30,7 @@ Q-Wiki is an OpenACS wiki using a templating system that allows tcl procedures t
 Q-Wiki is derived from OpenACS' ecommerce package with feedback from administrators that have voiced interest in having some kind of strictly filtered ACS developer support dynamics for user content.
 </p>
 <h3>features</h3>
-<p>Pages automatically have revisioning.</p>
+<p>Pages automatically have revisioning ie multi-undo.</p>
 <p>Pages must be trashed before being deleted. Trashed pages can be untrashed. Trashed pages are not published.</p>
 <p>Users with create permission can also trash their own creations.</p>
 <p>No UI javascript is used, so technologies with limited UI or computing power can use it.</p>
@@ -38,9 +38,10 @@ Q-Wiki is derived from OpenACS' ecommerce package with feedback from administrat
 <p>A package parameter can switch the TCL/ADP rendering of content on or off.</p>
 <p>The wiki web-app consists of a single q-wiki tcl/adp page pair and an extra unused "flags" field, which makes the app easily modifiable for custom applications.</p>
 <p>Comments, keywords, and page description fields are included with each page for web-based publishing SEO optimization.</p>
-<p>
-Here is an example dynamic template to hint at its capabilities:
-<p>
+<p>Extensible. More fields can be added to the page for customized applications.</p>
+<h3>
+An example dynamic template to hint at its capabilities:
+</h3>
 <hr>
 <pre>
 &lt;%
@@ -76,3 +77,11 @@ Contributor user numbers: '667'
 made these contributions: '10222', '10221', '10220', '10219', '10218', '10217', '10216', '10215', '10214', '10213', '10212', '10211', '10210', '10209', '10208', '10207', '10206', '10205', '10204', '10203', '10202', '10201', '10200', '10199', '10198', '10197', '10196', '10195', '10194', '10193'.</p>
 
 <hr>
+<h3>An example showing how to extend Q-wiki for customized applications.
+</he>
+<p>file list and example changes:</p>
+<ul><li>Modify target file and add new fields in <a href="index-extended-vuh.txt">www/index.vuh</a>.</li>
+<li>Define 3 new API procs in <a href="qwbw-wiki-procs-tcl.txt">tcl/qwbw-wiki-procs.tcl</a></li>
+<li>and call procs and add fields to <a href="q-wiki-extended-tcl.txt">www/q-wiki-extended.tcl</a>.</li>
+<li>Make any display alterations in <a href="q-wiki-extended-adp.txt">www/q-wiki-extended.adp</a>.</li>
+</ul>

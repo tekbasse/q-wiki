@@ -1,0 +1,60 @@
+# q-wiki/www/index.vuh
+# part of Q-Wiki package
+# requires OpenACS
+
+# index.vuh allows q-wiki to integrate with other services.
+# For robustness, rename q-wiki.tcl/q-wiki.adp to index.vuh to bypass having to repost data
+set conn_path_url [ad_conn path_info]
+
+array set input_array [list \
+                           url ""\
+                           page_id ""\
+                           page_name ""\
+                           page_title ""\
+                           page_contents ""\
+                           keywords ""\
+                           description ""\
+                           page_comments ""\
+                           page_template_id ""\
+                           page_flags ""\
+                           page_contents_default ""\
+                           submit "" \
+                           reset "" \
+                           mode "v" \
+                           next_mode "" \
+                           url_referring "" \
+                           model_ref "" \
+                           spec1ref "" \
+                           spec1default "" \
+                           spec2ref "" \
+                           spec2default "" \
+                           spec3ref "" \
+                           spec3default "" \
+                           image_name "" \
+                           image_width "" \
+                           image_height "" \
+                           thumbnail_name "" \
+                           thumbnail_width "" \
+                           thumbnail_height "" \
+                           price "" \
+                           dimensions "" \
+                           ship_wt "" \
+                           actual_wt "" \
+                           unit "" \
+                          ]
+set query_key_list [array names input_array]
+
+set form_posted [qf_get_inputs_as_array input_array]
+set input_array(url) $conn_path_url
+set input_array(url_referring) "index.vuh"
+# re-post data to new location
+foreach query_key $query_key_list {
+    rp_form_put $query_key [ad_urlencode $input_array(${query_key})]
+    if { $query_key eq "url" } {
+        ns_log Notice "q-wiki/www/index.vuh: url $input_array(url)"
+    }
+}
+rp_internal_redirect /packages/bw-custom/www/q-wiki
+ad_script_abort
+
+
