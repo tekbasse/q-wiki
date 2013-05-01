@@ -9,7 +9,7 @@
     <implements-subsite-p>f</implements-subsite-p>
     <inherit-templates-p>f</inherit-templates-p>
     
-    <version name="5.89b" url="http://openacs.org/repository/download/apm/q-wiki-5.89b.apm">
+    <version name="5.90b" url="http://openacs.org/repository/download/apm/q-wiki-5.90b.apm">
         <owner url="mailto:kappa@dekka.com">Benjamin Brink</owner>
         <owner url="http://openacs.org">OpenACS Community</owner>
         <summary>A wiki and templating system</summary>
