@@ -5,7 +5,7 @@
 
 
 <if @menu_html@ not nil>
-  <div style="text-align: right; margin: 0; padding: 0;">@menu_html;noquote@</div>
+  <div class="action-list" style="float: right; border: 1px dotted;">@menu_html;noquote@</div>
 </if>
 <h1>@title@</h1>
 <if @user_message_html@ not nil>

@@ -22,6 +22,7 @@ array set input_array [list \
                            reset "" \
                            mode "v" \
                            next_mode "" \
+                           qf_security_hash "" \
                            url_referring "" \
                            model_ref "" \
                            spec1ref "" \

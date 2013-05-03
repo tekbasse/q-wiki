@@ -53,6 +53,7 @@ array set input_array [list \
                            mode "v" \
                            next_mode "" \
                            url_referring "" \
+                           qf_security_hash "" \
                            model_ref "" \
                            spec1ref "" \
                            spec1default "" \
@@ -80,8 +81,10 @@ set title $input_array(page_title)
 set form_posted [qf_get_inputs_as_array input_array2]
 if { $form_posted && ( $input_array2(mode) eq "w" || $input_array2(mode) eq "d" ) } {
     # do this again for hash_check to avoid irreversable cases.
+    #  left off "delete" cases, as these need to be converted to forms in menu..  $input_array2(mode) eq "d" 
     array unset input_array2
     set form_posted [qf_get_inputs_as_array input_array hash_check 1]
+    
 } else {
     array set input_array [array get input_array2]
 }
@@ -673,7 +676,7 @@ switch -exact -- $mode {
             }
 
             ns_log Notice "q-wiki.tcl(427): mode = $mode ie. list of pages, index"
-            lappend menu_list [list edit "${url}?mode=e" ]
+            lappend menu_list [list label edit url ${url} mode e]
 
             append title " index" 
             # show page
@@ -735,7 +738,16 @@ switch -exact -- $mode {
                 } 
 
                 if { $delete_p && $trashed_p } {
-                    append active_link2 " &nbsp; &nbsp; <a href=\"${page_url}?page_template_id=${template_id}&mode=d&next_mode=l\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
+                    #append active_link2 " &nbsp; &nbsp; <a href=\"${page_url}?page_template_id=${template_id}&mode=d&next_mode=l\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
+                    set form_id 2013-list-${template_id}-d
+                    qf_form form_id $form_id action $page_url method post id 2013-list-${template_id}-d hash_check 1
+                    qf_input form_id $form_id type hidden name mode value d
+                    qf_input form_id $form_id type hidden name next_mode value l
+                    qf_input form_id $form_id type hidden name page_template_id value $template_id
+                    qf_input form_id $form_id type submit value delete
+                    qf_close form_id $form_id
+                    append active_link2 " &nbsp; [qf_read form_id $form_id] &nbsp;"
+
                 } 
                 set stats_list [lreplace $stats_list 0 0 $active_link]
                 set stats_list [lreplace $stats_list 1 1 $active_link2]
@@ -771,12 +783,12 @@ switch -exact -- $mode {
     }
     r {
         #  revisions...... presents a list of page revisions
-            lappend menu_list [list index "index?mode=l"]
+            lappend menu_list [list label index url index mode l]
 
         if { $write_p } {
             ns_log Notice "q-wiki.tcl mode = $mode ie. revisions"
             # build menu options
-            lappend menu_list [list edit "${url}?mode=e" ]
+            lappend menu_list [list label edit url ${url} mode e]
             
             # show page revisions
             # sort by template_id, columns
@@ -858,7 +870,16 @@ switch -exact -- $mode {
                     set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
                 } 
                 if { ( $delete_p || $page_user_id == $user_id ) && $trashed_p } {
-                    append active_link2 " &nbsp; &nbsp; <a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
+#                    append active_link2 " &nbsp; &nbsp; <a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
+                    set form_id 2013-revisions-${page_id}-d
+                    qf_form form_id $form_id action $url method post id 2013-revisions-${page_id}-d hash_check 1
+                    qf_input form_id $form_id type hidden name mode value d
+                    qf_input form_id $form_id type hidden name next_mode value r
+                    qf_input form_id $form_id type hidden name page_id value $page_id
+                    qf_input form_id $form_id type submit value delete
+                    qf_close form_id $form_id
+                    append active_link2 " &nbsp; [qf_read form_id $form_id] &nbsp;"
+
                 } 
                 set stats_list [lreplace $stats_list 8 8 $active_link2]
 
@@ -1053,7 +1074,7 @@ switch -exact -- $mode {
             }
             ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
 
-            lappend menu_list [list index "index?mode=l"]
+            lappend menu_list [list label index url index mode l]
 
             # get page info
             if { $page_id eq "" } {
@@ -1069,9 +1090,9 @@ switch -exact -- $mode {
 
             if { $create_p } {
                 if { $page_id_from_url ne "" || $page_id ne "" } {
-                    lappend menu_list [list revisions "${url}?mode=r"]
+                    lappend menu_list [list label revisions url ${url} mode r]
                 } 
-                lappend menu_list [list edit "${url}?mode=e" ]
+                lappend menu_list [list label edit url ${url} mode e]
             }
             
             if { [llength $page_list] > 1 } {
@@ -1083,9 +1104,10 @@ switch -exact -- $mode {
                 set template_id [lindex $page_list 4]
                 # trashed pages cannot be viewed by public, but can be viewed with permission
                 if { $delete_p && $trashed_p } {
-                    lappend menu_list [list delete "${url}?mode=d&next_mode=l&page_template_id=${template_id}" ]
+                    lappend menu_list [list label delete url ${url} mode d next_mode l page_template_id ${template_id}]
+
                 } elseif { $delete_p && !$trashed_p } {
-                    lappend menu_list [list trash "${url}?mode=t&next_mode=v&page_template_id=${template_id}" ]
+                    lappend menu_list [list label trash url ${url} mode t next_mode v page_template_id ${template_id}]
                 }
                 
                 if { $keywords ne "" } {
@@ -1101,28 +1123,28 @@ switch -exact -- $mode {
 
 #---- insert extended view
 #  When extending, you can insert values here, or reference with an include via q-wiki.adp
-# such as this included example: <include src=/www/product model=@model_ref@> in the .adp file.
-# Alternately, one could treat the extended fields similar to the wiki ones.
-# for this example with these lines:
+# such as this included example: <include src=/www/product model=${model_ref}>
+# alternately, one could treat the extended fields similar to the wiki ones.
+# for this example, uncomment these lines:
 
                 set model_ref [lindex $page_bw_list 0]
-                set spec1ref [lindex $page_bw_list 1]
-                set spec1default [lindex $page_bw_list 2]
-                set spec2ref [lindex $page_bw_list 3]
-                set spec2default [lindex $page_bw_list 4]
-                set spec3ref [lindex $page_bw_list 5]
-                set spec3default [lindex $page_bw_list 6]
-                set image_name [lindex $page_bw_list 7]
-                set image_width [lindex $page_bw_list 8]
-                set image_height [lindex $page_bw_list 9]
-                set thumbnail_name [lindex $page_bw_list 10]
-                set thumbnail_width [lindex $page_bw_list 11]
-                set thumbnail_height [lindex $page_bw_list 12]
-                set price [lindex $page_bw_list 13]
-                set dimensions [lindex $page_bw_list 14]
-                set ship_wt [lindex $page_bw_list 15]
-                set actual_wt [lindex $page_bw_list 16]
-                set unit [lindex $page_bw_list 17]
+#                set spec1ref [lindex $page_bw_list 1]
+#                set spec1default [lindex $page_bw_list 2]
+#                set spec2ref [lindex $page_bw_list 3]
+#                set spec2default [lindex $page_bw_list 4]
+#                set spec3ref [lindex $page_bw_list 5]
+#                set spec3default [lindex $page_bw_list 6]
+#                set image_name [lindex $page_bw_list 7]
+#                set image_width [lindex $page_bw_list 8]
+#                set image_height [lindex $page_bw_list 9]
+#                set thumbnail_name [lindex $page_bw_list 10]
+#                set thumbnail_width [lindex $page_bw_list 11]
+#                set thumbnail_height [lindex $page_bw_list 12]
+#                set price [lindex $page_bw_list 13]
+#                set dimensions [lindex $page_bw_list 14]
+#                set ship_wt [lindex $page_bw_list 15]
+#                set actual_wt [lindex $page_bw_list 16]
+#                set unit [lindex $page_bw_list 17]
 
 #                append page_contents_unquoted "<br>Model ref: $model_ref <br>"
 #                append page_contents_unquoted "Spec1 ref: $spec1ref <br>"
@@ -1185,11 +1207,36 @@ switch -exact -- $mode {
 set menu_html ""
 set validated_p_exists [info exists validated_p]
 if { $validated_p_exists && $validated_p || !$validated_p_exists } {
+    set menu_html "<ul>"
     foreach item_list $menu_list {
-        set menu_label [lindex $item_list 0]
-        set menu_url [lindex $item_list 1]
-        append menu_html "<a href=\"${menu_url}\" title=\"${menu_label}\">${menu_label}</a> &nbsp; "
+        set item_list_len [llength $item_list]
+        if { $item_list_len > 3 && [expr { ( $item_list_len / 2. ) - floor( $item_list_len / 2 ) } ] == 0 } {
+            # list pairs
+            # lindex $item_list 0 is label
+            set menu_label [lindex $item_list 1]
+            # lindex $item_list 2 is url
+            set menu_url [lindex $item_list 3]
+            set form_id "2013-${menu_label}"
+            if { $menu_label eq "delete" } {
+                qf_form form_id $form_id action $menu_url method post id 2013-$menu_label hash_check 1
+                #qf_form action $menu_url method post id 2013-$menu_label hash_check 1
+            } else {
+                # security_hash not significant or expected
+                qf_form form_id $form_id action $menu_url method post id 2013-$menu_label
+                #qf_form action $menu_url method post id 2013-$menu_label
+            }
+            foreach {menu_name menu_value} [lrange $item_list 4 end] {
+                qf_input form_id $form_id type hidden name $menu_name value $menu_value
+                #qf_input type hidden name $menu_name value $menu_value
+            }
+            qf_input form_id $form_id type submit value $menu_label
+            qf_close form_id $form_id
+            #qf_close
+            append menu_html "<li>[qf_read form_id $form_id]</li>"
+            #        append menu_html "<a href=\"${menu_url}\" title=\"${menu_label}\">${menu_label}</a> &nbsp; "
+        }
     }
-} 
+    append menu_html "</ul>"
+}
 set doc(title) $title
 set context [list $title]
