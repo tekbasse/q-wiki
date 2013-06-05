@@ -192,7 +192,7 @@ if { $form_posted } {
             set page_id $page_id_from_url
             set  mode ""
             set next_mode ""
-            lappend user_message_list "There has been an internal processing error. Try again or report issue to [ad_admin_owner]"
+            lappend user_message_list "#q-wiki.internal_processing_error# #q-wiki.Try_again_or_report_to_admin#"
             util_user_message -message [lindex $user_message_list end]
         }
         if { $page_template_id ne ""  && [qf_is_natural_number $page_template_id ] && $page_template_id_from_url ne $page_template_id } {
@@ -200,7 +200,7 @@ if { $form_posted } {
             set page_template_id $page_template_id_from_url
             set  mode ""
             set next_mode ""
-            lappend user_message_list "There has been an internal processing error. Try again or report issue to [ad_admin_owner]"
+            lappend user_message_list "#q-wiki.internal_processing_error# #q-wiki.Try_again_or_report_to_admin#"
             util_user_message -message [lindex $user_message_list end]
         }
         
@@ -273,8 +273,8 @@ if { $form_posted } {
                 ns_log Notice "q-wiki.tcl validated for $mode"
             } elseif { $read_p } {
                 # This is a 404 return, but we list pages for more convenient UI
-                lappend user_message_list "Page not found. Showing a list of pages."
-            util_user_message -message [lindex $user_message_list end]
+                lappend user_message_list "#q-wiki.Page_not_found# #q-wiki.Showing_a_list_of_pages#"
+		util_user_message -message [lindex $user_message_list end]
                 set mode "l"
             }
         } else {
@@ -407,8 +407,8 @@ if { $form_posted } {
                     set mode $next_mode
                     set page_id_from_url $page_id
                 } else {
-                    lappend user_message_list "Revision could not be made active. Try again or report issue to [ad_admin_owner]"
-            util_user_message -message [lindex $user_message_list end]
+                    lappend user_message_list "#q-wiki.Revision_could_not_be_activated# #q-wiki.Try_again_or_report_to_admin#"
+		    util_user_message -message [lindex $user_message_list end]
                     set mode "r"
                 }                    
             }
@@ -441,7 +441,7 @@ if { $form_posted } {
                 set mode $next_mode
             } 
             if { !$trash_done_p } {
-                lappend user_message_list "Item could not be trashed. You don't have permission to trash this item."
+                lappend user_message_list "#q-wiki.Item_could_not_be_trashed# #q-wiki.You_don_t_have_permission#"
             util_user_message -message [lindex $user_message_list end]
             }
             set next_mode ""
@@ -503,13 +503,13 @@ if { $form_posted } {
                                                 # banned executable found
                                                 set proc_allowed_p 0
                                                 lappend flagged_list $executable
-                                                lappend user_message_list "'$executable' is banned from use."
+                                                lappend user_message_list "'$executable' #q-wiki.is_banned_from_use#"
             util_user_message -message [lindex $user_message_list end]
                                             }
                                         }            
                                     } else {
                                         lappend flagged_list $executable
-                                        lappend user_message_list "'$executable' is not allowed at this time."
+                                        lappend user_message_list "'$executable' #q-wiki.is_not_allowed_at_this_time#"
             util_user_message -message [lindex $user_message_list end]
                                     }
                                 }
@@ -555,7 +555,7 @@ if { $form_posted } {
                         set page_id [qw_page_write $page_name $page_title $page_contents_filtered $keywords $description $page_comments $page_id $page_template_id $page_flags $package_id $user_id]
                         if { $page_id eq "" } {
                             ns_log Warning "q-wiki/q-wiki.tcl page write error for url '${url}'"
-                            lappend user_messag_list "There was an error creating the wiki page at '${url}'."
+                            lappend user_messag_list "#q-wiki.There_was_an_error_creating_page# '${url}'."
                         }
                     }
 
@@ -576,8 +576,8 @@ if { $form_posted } {
                 }
             } else {
                 # does not have permission to write
-                lappend user_message_list "Write operation could not be completed. You don't have permission."
-            util_user_message -message [lindex $user_message_list end]
+                lappend user_message_list "#q-wiki.Write_operation_did_not_succeed# #q-wiki.You_don_t_have_permission#"
+		util_user_message -message [lindex $user_message_list end]
                 ns_log Notice "q-wiki.tcl(402) User attempting to write content without permission."
                 if { $read_p } {
                     set mode "v"
@@ -595,7 +595,6 @@ if { $form_posted } {
 }
 
 
-#set menu_list \[list \[list Q-Wiki index\]\]
 set menu_list [list ]
 
 # OUTPUT / VIEW
@@ -612,9 +611,9 @@ switch -exact -- $mode {
             }
 
             ns_log Notice "q-wiki.tcl(427): mode = $mode ie. list of pages, index"
-            lappend menu_list [list edit "${url}?mode=e" ]
+            lappend menu_list [list #q-wiki.edit# "${url}?mode=e" ]
 
-            append title " index" 
+            append title " #q-wiki.index#" 
             # show page
             # sort by template_id, columns
             
@@ -660,21 +659,21 @@ switch -exact -- $mode {
                 if {  $write_p } {
                     # trash the page
                     if { $trashed_p } {
-                        set active_link2 " <a href=\"${page_url}?page_template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
+                        set active_link2 " <a href=\"${page_url}?page_template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"#acs-tcl.undelete#\" title=\"#acs-tcl.undelete#\" width=\"16\" height=\"16\"></a>"
                     } else {
-                        set active_link2 " <a href=\"${page_url}?page_template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
+                        set active_link2 " <a href=\"${page_url}?page_template_id=${template_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"#acs-tcl.delete#\" title=\"#acs-tcl.delete#\" width=\"16\" height=\"16\"></a>"
                     }
                 } elseif { $page_user_id == $user_id } {
                     # trash the revision
                     if { $trashed_p } {
-                        set active_link2 " <a href=\"${page_url}?page_id=${page_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
+                        set active_link2 " <a href=\"${page_url}?page_id=${page_id}&mode=t&next_mode=l\"><img src=\"${untrash_icon_url}\" alt=\"#acs-tcl.undelete#\" title=\"#acs-tcl.undelete#\" width=\"16\" height=\"16\"></a>"
                     } else {
-                        set active_link2 " <a href=\"${page_url}?page_id=${page_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
+                        set active_link2 " <a href=\"${page_url}?page_id=${page_id}&mode=t&next_mode=l\"><img src=\"${trash_icon_url}\" alt=\"#acs-tcl.delete#\" title=\"#acs-tcl.delete#\" width=\"16\" height=\"16\"></a>"
                     }
                 } 
 
                 if { $delete_p && $trashed_p } {
-                    append active_link2 " &nbsp; &nbsp; <a href=\"${page_url}?page_template_id=${template_id}&mode=d&next_mode=l\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
+                    append active_link2 " &nbsp; &nbsp; <a href=\"${page_url}?page_template_id=${template_id}&mode=d&next_mode=l\"><img src=\"${delete_icon_url}\" alt=\"#acs-subsite.remove#\" title=\"#acs-subsite.remove#\" width=\"16\" height=\"16\"></a> &nbsp; "
                 } 
                 set stats_list [lreplace $stats_list 0 0 $active_link]
                 set stats_list [lreplace $stats_list 1 1 $active_link2]
@@ -691,14 +690,14 @@ switch -exact -- $mode {
 
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "#acs-subsite.Name#" "&nbsp;" "#acs-kernel.common_Title#" "#acs-subsite.Description#" "#acs-subsite.Comment#"] ]
             set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
             # trashed table
             if { [llength $page_trashed_lists] > 0 } {
                 set page_trashed_sorted_lists $page_trashed_lists
-                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list Name "&nbsp;" Title Description Comments] ]
+                set page_trashed_sorted_lists [linsert $page_trashed_sorted_lists 0 [list "#acs-subsite.Name#" "&nbsp;" "#acs-kernel.common_Title#" "#acs-subsite.Description#" "#acs-subsite.Comment#"] ]
                 set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
                 
                 set page_trashed_html [qss_list_of_lists_to_html_table $page_trashed_sorted_lists $page_tag_atts_list $cell_formating_list]
@@ -710,12 +709,12 @@ switch -exact -- $mode {
     }
     r {
         #  revisions...... presents a list of page revisions
-            lappend menu_list [list index "index?mode=l"]
+            lappend menu_list [list #q-wiki.index# "index?mode=l"]
 
         if { $write_p } {
             ns_log Notice "q-wiki.tcl mode = $mode ie. revisions"
             # build menu options
-            lappend menu_list [list edit "${url}?mode=e" ]
+            lappend menu_list [list #q-wiki.edit# "${url}?mode=e" ]
             
             # show page revisions
             # sort by template_id, columns
@@ -792,12 +791,12 @@ switch -exact -- $mode {
                 set active_link_list [list $active_link]
                 set active_link2 ""
                 if { ( $write_p || $page_user_id == $user_id ) && $trashed_p } {
-                    set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${untrash_icon_url}\" alt=\"untrash\" title=\"untrash\" width=\"16\" height=\"16\"></a>"
+                    set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${untrash_icon_url}\" alt=\"#acs-tcl.undelete#\" title=\"#acs-tcl.undelete#\" width=\"16\" height=\"16\"></a>"
                 } elseif { $page_user_id == $user_id || $write_p } {
-                    set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${trash_icon_url}\" alt=\"trash\" title=\"trash\" width=\"16\" height=\"16\"></a>"
+                    set active_link2 " <a href=\"${url}?page_id=${page_id}&mode=t&next_mode=r\"><img src=\"${trash_icon_url}\" alt=\"#acs-tcl.delete#\" title=\"#acs-tcl.delete#\" width=\"16\" height=\"16\"></a>"
                 } 
                 if { ( $delete_p || $page_user_id == $user_id ) && $trashed_p } {
-                    append active_link2 " &nbsp; &nbsp; <a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\"><img src=\"${delete_icon_url}\" alt=\"delete\" title=\"delete\" width=\"16\" height=\"16\"></a> &nbsp; "
+                    append active_link2 " &nbsp; &nbsp; <a href=\"${url}?page_id=${page_id}&mode=d&next_mode=r\"><img src=\"${delete_icon_url}\" alt=\"#acs-subsite.remove#\" title=\"#acs-subsite.remove#\" width=\"16\" height=\"16\"></a> &nbsp; "
                 } 
                 set stats_list [lreplace $stats_list 8 8 $active_link2]
 
@@ -828,7 +827,7 @@ switch -exact -- $mode {
             #  edit...... edit/form mode of current context
 
             ns_log Notice "q-wiki.tcl mode = edit"
-            set cancel_link_html "<a hrer=\"list?mode=l\">Cancel</a>"
+            set cancel_link_html "<a hrer=\"list?mode=l\">#acs-kernel.common_Cancel#</a>"
 
             # for existing pages, add template_id
             set conn_package_url [ad_conn package_url]
@@ -848,10 +847,10 @@ switch -exact -- $mode {
                 set page_contents [lindex $page_list 11]
                 set page_comments [lindex $page_list 12]
 
-                set cancel_link_html "<a href=\"$page_name\">Cancel</a>"
+                set cancel_link_html "<a href=\"$page_name\">#acs-kernel.common_Cancel#</a>"
             } 
            
-            append title "${page_name} -  edit"
+            append title "${page_name} -  #q-wiki.edit#"
 
             set rows_list [split $page_contents "\n\r"]
             set rows_max [llength $rows_list]
@@ -875,32 +874,32 @@ switch -exact -- $mode {
             qf_input type hidden value $page_flags name page_flags
             qf_input type hidden value $page_template_id name page_template_id
             #        qf_input type hidden value $page_id name page_id label ""
-            qf_append html "<h3>Q-Wiki page edit</h3>"
+            qf_append html "<h3>Q-Wiki #acs-templating.Page# #q-wiki.edit#</h3>"
             qf_append html "<div style=\"width: 70%; text-align: right;\">"
             set page_name_unquoted [ad_unquotehtml $page_name]
-            qf_input type text value $page_name_unquoted name page_name label "Name:" size 40 maxlength 40
+            qf_input type text value $page_name_unquoted name page_name label "#acs-subsite.Name#:" size 40 maxlength 40
             qf_append html "<br>"
             set page_title_unquoted [ad_unquotehtml $page_title]
-            qf_input type text value $page_title_unquoted name page_title label "Title:" size 40 maxlength 80
+            qf_input type text value $page_title_unquoted name page_title label "#acs-kernel.common_Title#:" size 40 maxlength 80
             qf_append html "<br>"
             set description_unquoted [ad_unquotehtml $description]
-            qf_textarea value $description_unquoted cols 40 rows 1 name description label "Description:"
+            qf_textarea value $description_unquoted cols 40 rows 1 name description label "#acs-subsite.Description#:"
             qf_append html "<br>"
             set page_comments_unquoted [ad_unquotehtml $page_comments]
-            qf_textarea value $page_comments_unquoted cols 40 rows 3 name page_comments label "Comments:"
+            qf_textarea value $page_comments_unquoted cols 40 rows 3 name page_comments label "#acs-subsite.Comment#:"
             qf_append html "<br>"
             set page_contents_unquoted [ad_unquotehtml $page_contents]
-            qf_textarea value $page_contents_unquoted cols $columns_max rows $rows_max name page_contents label "Contents:"
+            qf_textarea value $page_contents_unquoted cols $columns_max rows $rows_max name page_contents label "#notifications.Contents#:"
             qf_append html "<br>"
             set keywords_unquoted [ad_unquotehtml $keywords]
-            qf_input type text value $keywords_unquoted name keywords label "Keywords:" size 40 maxlength 80
+            qf_input type text value $keywords_unquoted name keywords label "#q-wiki.Keywords#:" size 40 maxlength 80
             qf_append html "</div>"
-            qf_input type submit value "Save"
+            qf_input type submit value "#acs-kernel.common_Save#"
             qf_append html " &nbsp; &nbsp; &nbsp; ${cancel_link_html}"
             qf_close
             set form_html [qf_read]
         } else {
-            lappend user_message_list "Edit operation could not be completed. You don't have permission."
+            lappend user_message_list "#q-wiki.Edit_operation_did_not_succeed# #q-wiki.You_don_t_have_permission#"
             util_user_message -message [lindex $user_message_list end]
         }
     }
@@ -916,7 +915,7 @@ switch -exact -- $mode {
             }
             ns_log Notice "q-wiki.tcl(667): mode = $mode ie. view"
 
-            lappend menu_list [list index "index?mode=l"]
+            lappend menu_list [list #q-wiki.index# "index?mode=l"]
 
             # get page info
             if { $page_id eq "" } {
@@ -930,9 +929,9 @@ switch -exact -- $mode {
 
             if { $create_p } {
                 if { $page_id_from_url ne "" || $page_id ne "" } {
-                    lappend menu_list [list revisions "${url}?mode=r"]
+                    lappend menu_list [list #q-wiki.revisions# "${url}?mode=r"]
                 } 
-                lappend menu_list [list edit "${url}?mode=e" ]
+                lappend menu_list [list #q-wiki.edit# "${url}?mode=e" ]
             }
             
             if { [llength $page_list] > 1 } {
@@ -944,13 +943,13 @@ switch -exact -- $mode {
                 set template_id [lindex $page_list 4]
                 # trashed pages cannot be viewed by public, but can be viewed with permission
                 if { $delete_p && $trashed_p } {
-                    lappend menu_list [list delete "${url}?mode=d&next_mode=l&page_template_id=${template_id}" ]
+                    lappend menu_list [list #acs-subsite.remove# "${url}?mode=d&next_mode=l&page_template_id=${template_id}" ]
                 } elseif { $delete_p && !$trashed_p } {
-                    lappend menu_list [list trash "${url}?mode=t&next_mode=v&page_template_id=${template_id}" ]
+                    lappend menu_list [list #acs-tcl.delete# "${url}?mode=t&next_mode=v&page_template_id=${template_id}" ]
                 }
                 
                 if { $keywords ne "" } {
-                template::head::add_meta -name keywords -content $keywords
+		    template::head::add_meta -name keywords -content $keywords
                 }
                 if { $description ne "" } {
                     template::head::add_meta -name description -content $description

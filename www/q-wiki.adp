@@ -19,12 +19,12 @@
 </if>
 
 <if @page_stats_html@ not nil>
- <h3>pages</h3>
+ <h3>#acs-admin.Pages#</h3>
  @page_stats_html;noquote@
 </if>
 
 <if @page_trashed_html@ not nil>
-<h3>trashed</h3>
+<h3>#acs-kernel.member_state_Deleted#</h3>
  @page_trashed_html;noquote@
 </if>
 

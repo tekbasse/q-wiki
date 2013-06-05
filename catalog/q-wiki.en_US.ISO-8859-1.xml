@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message_catalog package_key="q-wiki" package_version="0.1d" locale="en_US" charset="ISO-8859-1">
+<msg key="Item_could_not_be_trashed">Item could not be deleted.</msg>
+<msg key="You_don_t_have_permission">You don't have permission.</msg>
+<msg key="Revision_could_not_be_activated">Revision could not be made active.</msg>
+<msg key="Try_again_or_report_to_admin">Try again or report issue to system administrator.</msg>
+<msg key="internal_processing_error">There has been an internal processing error.</msg>
+<msg key="Page_not_found">Page not found.</msg>
+<msg key="Showing_a_list_of_pages">Showing a list of pages.</msg>
+<msg key="active">active</msg>
+<msg key="is_banned_from_use">is banned from use.</msg>
+<msg key="is_not_allowed_at_this_time">is not allowed at this time.</msg>
+<msg key="Write_operation_did_not_succeed">Write operation could not be completed.</msg>
+<msg key="Edit_operation_did_not_succeed">Edit operation could not be completed.</msg>
+<msg key="There_was_an_error_creating_page">There was an error creating the page at </msg>
+<msg key="edit">edit</msg>
+<msg key="Edit">Edit</msg>
+<msg key="revisions">revisions</msg>
+<msg key="index">index</msg>
+<msg key="Keywords">Keywords</msg>
+</message_catalog>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message_catalog package_key="q-wiki" package_version="0.1d" locale="de_DE" charset="ISO-8859-1">
+<msg key="Active">Aktiv</msg>
+<msg key="Inactive">Inaktiv</msg>
+<msg key="description">Kurzbeschreibung</msg>
+<msg key="Name">Name</msg>
+<msg key="edit">eearbeiten</msg>
+<msg key="Edit">Bearbeiten</msg>
+<msg key="Save">Speichern</msg>
+</message_catalog>
