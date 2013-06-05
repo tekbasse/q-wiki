@@ -810,7 +810,7 @@ switch -exact -- $mode {
 
             # convert table (list_of_lists) to html table
             set page_stats_sorted_lists $page_stats_lists
-            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "ID" "Contributor" "Length" "Last Modified" "Created" "Comments" "Flags" "Live?" "Trash status"] ]
+            set page_stats_sorted_lists [linsert $page_stats_sorted_lists 0 [list "#q-wiki.ID#" "#q-wiki.Contributor#" "#q-wiki.Length#" "#q-wiki.Last_Modified#" "#q-wiki.Created#" "#acs-subsite.Comment#" "#q-wiki.Flags#" "#q-wiki.Liveq#" "#acs-subsite.Status#"] ]
             set page_tag_atts_list [list border 0 cellspacing 0 cellpadding 3]
             set cell_formating_list [list ]
             set page_stats_html [qss_list_of_lists_to_html_table $page_stats_sorted_lists $page_tag_atts_list $cell_formating_list]
