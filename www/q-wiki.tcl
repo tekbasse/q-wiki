@@ -611,7 +611,7 @@ switch -exact -- $mode {
             }
 
             ns_log Notice "q-wiki.tcl(427): mode = $mode ie. list of pages, index"
-            lappend menu_list [list #q-wiki.edit# "${url}?mode=e" ]
+            #lappend menu_list [list #q-wiki.edit# "${url}?mode=e" ]
 
             append title " #q-wiki.index#" 
             # show page
