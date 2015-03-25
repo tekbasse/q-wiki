@@ -21,6 +21,7 @@
         <requires url="q-forms" version="0.001"/>
         <requires url="spreadsheet" version="0.001"/>
         <requires url="ajaxhelper" version="0.87d"/>
+        <requires url="notifications" version="5.8.0"/>
         <callbacks>
         </callbacks>
         <parameters>
