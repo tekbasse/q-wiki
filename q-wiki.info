@@ -9,14 +9,14 @@
     <implements-subsite-p>f</implements-subsite-p>
     <inherit-templates-p>f</inherit-templates-p>
     
-    <version name="0.086" url="http://openacs.org/repository/download/apm/q-wiki-0.086.apm">
+    <version name="0.087" url="http://openacs.org/repository/download/apm/q-wiki-0.087.apm">
         <owner url="mailto:tekbasse@yahoo.com">Benjamin Brink</owner>
         <owner url="http://openacs.org">OpenACS Community</owner>
         <summary>A wiki and templating system</summary>
         <description format="text/plain">A wiki and templating system derived from the ecommerce product templating system.</description>
         <maturity>1</maturity>
 
-        <provides url="q-wiki" version="0.086"/>
+        <provides url="q-wiki" version="0.087"/>
 
         <requires url="q-forms" version="0.045"/>
         <requires url="spreadsheet" version="0.001"/>
@@ -30,6 +30,7 @@
             <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="PageNameLen"  default="40" description="Maximum characters in a page name (tail of the url). Database has a limit of 300" section_name="validation"/>
             <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="BannedProc"  default="upvar uplevel proc sourcerename gets open ns_*" description="A separated list of all procedures names that cause the entire template to fail." section_name="security"/>
             <parameter datatype="string"  min_n_values="1"  max_n_values="1"  name="AllowedProc"  default="= qaf_* f::* acc_fin::* person::name qw_contributors qw_most_recent_edit_stats qw_user_contributions template::util::tcl_to_sql_list expr set lindex llength" description="A space separated list of all procedure names that people may use. Screening uses STRING MATCH, so globs are okay. See defaults for example. the '=' allows single line &lt;%= %&gt; rendering." section_name="security"/>
+            <parameter datatype="number"  min_n_values="1"  max_n_values="1"  name="IndexIsList"  default="0" description="Shall users see a list of pages on index page? 0 is no. 1 is yes." section_name="special"/>
         </parameters>
 
     </version>

@@ -30,9 +30,14 @@ set form_posted [qf_get_inputs_as_array input_array]
 set input_array(url) $conn_path_url
 set input_array(url_referring) "index.vuh"
 # re-post data to new location
-foreach query_key $query_key_list {
+foreach query_key $query_key_list {	
     rp_form_put $query_key [ad_urlencode $input_array(${query_key})]
     if { $query_key eq "url" } {
+        set package_id [ad_conn package_id]
+        if { $input_array(url) eq "" && [parameter::get -package_id $package_id -parameter IndexIsList -default 0] } {
+            set input_array(url) "index"
+            set input_array(mode) "l"
+        }	  
         ns_log Notice "q-wiki/www/index.vuh: url $input_array(url)"
     }
 }
