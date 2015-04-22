@@ -461,7 +461,7 @@ if { $form_posted } {
                 set flagged_list [list ]
                 
                 if { $allow_adp_tcl_p } {
-                    ns_log Notice "q-wki.tcl(311): adp tags allowed. Fine grain filtering.."
+                    ns_log Notice "q-wiki.tcl(311): adp tags allowed. Fine grain filtering.."
                     # filter page_contents for allowed and banned procs in adp tags
                     set banned_proc_list [split [parameter::get -package_id $package_id -parameter BannedProc]]
                     set allowed_proc_list [split [parameter::get -package_id $package_id -parameter AllowedProc]]
@@ -876,22 +876,22 @@ switch -exact -- $mode {
             #        qf_input type hidden value $page_id name page_id label ""
             qf_append html "<h3>Q-Wiki #acs-templating.Page# #q-wiki.edit#</h3>"
             qf_append html "<div style=\"width: 70%; text-align: right;\">"
-            set page_name_unquoted [ad_unquotehtml $page_name]
+            set page_name_unquoted [qf_unquote $page_name]
             qf_input type text value $page_name_unquoted name page_name label "#acs-subsite.Name#:" size 40 maxlength 40
             qf_append html "<br>"
-            set page_title_unquoted [ad_unquotehtml $page_title]
+            set page_title_unquoted [qf_unquote $page_title]
             qf_input type text value $page_title_unquoted name page_title label "#acs-kernel.common_Title#:" size 40 maxlength 80
             qf_append html "<br>"
-            set description_unquoted [ad_unquotehtml $description]
+            set description_unquoted [qf_unquote $description]
             qf_textarea value $description_unquoted cols 40 rows 1 name description label "#acs-subsite.Description#:"
             qf_append html "<br>"
-            set page_comments_unquoted [ad_unquotehtml $page_comments]
+            set page_comments_unquoted [qf_unquote $page_comments]
             qf_textarea value $page_comments_unquoted cols 40 rows 3 name page_comments label "#acs-subsite.Comment#:"
             qf_append html "<br>"
-            set page_contents_unquoted [ad_unquotehtml $page_contents]
+            set page_contents_unquoted [qf_unquote $page_contents]
             qf_textarea value $page_contents_unquoted cols $columns_max rows $rows_max name page_contents label "#notifications.Contents#:"
             qf_append html "<br>"
-            set keywords_unquoted [ad_unquotehtml $keywords]
+            set keywords_unquoted [qf_unquote $keywords]
             qf_input type text value $keywords_unquoted name keywords label "#q-wiki.Keywords#:" size 40 maxlength 80
             qf_append html "</div>"
             qf_input type submit value "#acs-kernel.common_Save#"
