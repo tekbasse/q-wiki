@@ -37,7 +37,7 @@ CREATE TABLE qw_wiki_page (
         created timestamptz,
         content text,
         comments text
-     );    
+);
 
 create index qw_wiki_page_id_idx on qw_wiki_page (id);
 create index qw_wiki_page_template_id_idx on qw_wiki_page (template_id);
@@ -52,8 +52,32 @@ CREATE TABLE qw_page_url_map (
         --  should be a value from qw_wiki_page.id
         trashed varchar(1),
         instance_id integer
-        );
+);
 
 create index qw_page_url_map_url_idx on qw_page_url_map (url);
 create index qw_page_url_map_instance_id_idx on qw_page_url_map (instance_id);
 create index qw_page_url_map_page_id_idx on qw_page_url_map (page_id);
+
+-- following map is for using qw-wiki as a template repository
+-- where space delimited list of fields is provided and
+-- a function returns a possible custom field order
+-- where the template contains one row of field values $1 ..$9 
+-- The idea is to allow a web-editable html template control
+-- a table or list report suitable for responsive, local customizations
+-- without having to hard code html changes.
+CREATE TABLE qw_template_custom_map (
+       instance_id integer,
+       -- customizations can be user only by including user_id
+       user_id integer,
+       -- report_ref identifies a specific report, usually same as wiki page name
+       report_ref varchar(80),
+       -- ordered list of default fields
+       default_fields varchar(320),
+       -- custom order of up to same fields
+       custom_order varchar(320)
+);
+
+create index qw_template_custom_map_instance_id_idx on qw_template_custom_map (instance_id);
+create index qw_template_custom_map_user_id_idx on qw_template_custom_map (user_id);
+create index qw_template_custom_map_report_ref_idx on qw_template_custom_map (report_ref);
+create index qw_template_custom_map_default_fields_idx on qw_template_custom_map (default_fields);

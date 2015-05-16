@@ -4,6 +4,13 @@
 -- @for OpenACS.org
 -- @cvs-id
 --
+drop index qw_template_custom_map_instance_id_idx;
+drop index qw_template_custom_map_user_id_idx;
+drop index qw_template_custom_map_report_ref_idx;
+drop index qw_template_custom_map_default_fields_idx;
+
+drop table qw_template_custom_map;
+
 drop index qw_page_url_map_url_idx;
 drop index qw_page_url_map_page_id_idx;
 drop table qw_page_url_map;
