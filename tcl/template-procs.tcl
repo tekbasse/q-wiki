@@ -1,6 +1,6 @@
 ad_library {
 
-    API for q-wiki 
+    API for q-wiki templates 
     @creation-date 17 Jul 2012
     @Copyright (c) 2012-5 Benjamin Brink
     @license GNU General Public License 3, see project home or http://www.gnu.org/licenses/gpl-3.0.en.html
