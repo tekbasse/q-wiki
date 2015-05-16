@@ -15,6 +15,8 @@
         <summary>A wiki and templating system</summary>
         <description format="text/plain">A wiki and templating system derived from the ecommerce product templating system.</description>
         <maturity>1</maturity>
+        <license>GNU Gpl 3.0 or higher</license>
+        <license url="http://www.gnu.org/licenses/gpl.txt">GPL3</license>
 
         <provides url="q-wiki" version="0.090"/>
 
