@@ -827,7 +827,7 @@ switch -exact -- $mode {
             #  edit...... edit/form mode of current context
 
             ns_log Notice "q-wiki.tcl mode = edit"
-            set cancel_link_html "<a hrer=\"list?mode=l\">#acs-kernel.common_Cancel#</a>"
+            set cancel_link_html "<a href=\"list?mode=l\">#acs-kernel.common_Cancel#</a>"
 
             # for existing pages, add template_id
             set conn_package_url [ad_conn package_url]
