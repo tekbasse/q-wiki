@@ -9,16 +9,16 @@
     <implements-subsite-p>f</implements-subsite-p>
     <inherit-templates-p>f</inherit-templates-p>
     
-    <version name="0.090" url="http://openacs.org/repository/download/apm/q-wiki-0.090.apm">
+    <version name="0.098" url="http://openacs.org/repository/download/apm/q-wiki-0.098.apm">
         <owner url="mailto:tekbasse@yahoo.com">Benjamin Brink</owner>
         <owner url="http://openacs.org">OpenACS Community</owner>
         <summary>A wiki and templating system</summary>
         <description format="text/plain">A wiki and templating system derived from the ecommerce product templating system.</description>
         <maturity>1</maturity>
-        <license>GNU Gpl 3.0 or higher</license>
-        <license url="http://www.gnu.org/licenses/gpl.txt">GPL3</license>
+        <license>GNU Gpl 2.0 or higher</license>
+        <license url="http://www.gnu.org/licenses/gpl.txt">GPL2</license>
 
-        <provides url="q-wiki" version="0.090"/>
+        <provides url="q-wiki" version="0.098"/>
 
         <requires url="q-forms" version="0.045"/>
         <requires url="spreadsheet" version="0.001"/>

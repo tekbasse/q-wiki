@@ -3,7 +3,7 @@ ad_library {
     API for q-wiki 
     @creation-date 17 Jul 2012
     @Copyright (c) 2012-5 Benjamin Brink
-    @license GNU General Public License 3, see project home or http://www.gnu.org/licenses/gpl-3.0.en.html
+    @license GNU General Public License 2, see project home or https://www.gnu.org/licenses/gpl-2.0.html
     @project home: http://github.com/tekbasse/q-wiki
     @address: po box 20, Marylhurst, OR 97036-0020 usa
     @email: tekbasse@yahoo.com
