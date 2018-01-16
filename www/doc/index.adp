@@ -90,9 +90,32 @@ made these contributions: '10222', '10221', '10220', '10219', '10218', '10217', 
 </p>
 <h2>Templates
 </h2>
-<p>Q-wiki can be setup as a template for tables (and lists and forms) as well as pages for wiki and ecommerce catalog apps.
+<p>Q-wiki pages can be used as templates for other packages, thereby reducing the need for hardcoded html.
+Templates display data pulled in from other sources.
 </p>
-<p>Q-wiki page content stores html for displaying a row.
+<h3>Detail</h3>
+<p>Website workflow often requires making changes where html is hardcoded.
+Hardcoded html makes code updates for admins a laborious task;
+Admins have to re-integrate html changes into each updated code release.
+In addition to the extra workload, there's always a risk that something will break in the upgrade.
+</p>
+<p>How can style be managed without hard-coding customizations? 
+</p>
+<p>By keeping customizations in the db. One way is by referencing page content using Q-wiki API when building an OpenACS package.
+And building a report (list, table etc) dynamically using OpenACS procs.
+</p>
+<h3>Helper api for customizing list or column orders.</h3>
+<p>As an example to show dynamic assignments possible within an unchanged template, a couple of tcl procs are provided.
+</p>
+<p>Templates can change order of columns in a list based on user_id or most anything.
+</p>
+<p><a href="/api-doc/proc-view?proc=qw_template_custom_read">qw_template_custom_read</a> allows column orders to be customized on up to a per user case.
+This information can then be used to build reports with column in different orders etc.
+Each case is set with <a href="/api-doc/proc-view?proc=qw_template_custom_set">qw_template_custom_set</a> .
+</p>
+<p><code>qw_template_custom_read</code> retrieves html for displaying a row.
+</p>
+<p>In this example, 
 $1 $2 $3 .. $9 are used to reference variable values by column number.
 $1 is value for column 1 etc.
 </p>
@@ -101,21 +124,5 @@ $1 is value for column 1 etc.
 <pre>
 &lt;tr&gt; &lt;td&gt;$1&lt;/td&gt; &lt;td&gt;$2&lt;/td&gt; &lt;td&gt;$3&lt;/td&gt; &lt;/tr&gt;
 </pre>
-<p>However, TABLEs are too wide for convenient display on many small devices.
-</p>
-<p>Lists and DIVs that wrap using responsive style techniques are preferred.
-</p>
-<p>Standard workflow is to aply changes to code where html is hardcoded.
-Hardcoded html makes code updates for admins a laborious task;
-Admins have to re-integrate html changes into each updated code release.
-In addition to the extra workload, there's always a risk that something will break in the upgrade.
-</p>
-<p>How can style be adjusted without hard-coding customizations? 
-</p>
-<p>By keeping customizations in the db. One way is by referencing page content using Q-wiki API.
-And building a report (list, table etc) using OpenACS procs. 
-</p>
-<p>qw_template_custom_read allows column orders to be customized on up to a per user case.
-This information can then be used to build reports with column in different orders etc.
-Each case is set with qw_template_custom_set .
+<p><code>qw_template_custom_read</code> would then provide the info in some varied way according what was set by <code>qw_template_custom_set</code>.
 </p>
